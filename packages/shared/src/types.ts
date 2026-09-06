@@ -59,6 +59,27 @@ export type Appointment = {
   clinic?: { clinicName: string };
 };
 
+export type DoctorScheduleSlot = {
+  id: string;
+  clinicId: string;
+  startTime: string;
+  endTime: string;
+  maxPatients: number;
+  recurrenceType: "DAILY" | "WEEKLY" | "MONTHLY_DATE" | "MONTHLY_WEEKDAY" | "SPECIFIC_DATE";
+  recurrencePattern: Record<string, unknown>;
+  isActive: boolean;
+  onlineBookingEnabled?: boolean;
+};
+
+export type DoctorLiveStatus = {
+  isAvailable: boolean;
+  isLive: boolean;
+  reason: string;
+  capacity: { booked: number; max: number } | null;
+  operationalStatus?: "NORMAL" | "RUNNING_LATE" | "PAUSED";
+  delayMinutes?: number | null;
+};
+
 export type Doctor = {
   id: string;
   specialization: string | null;
@@ -67,6 +88,11 @@ export type Doctor = {
   fee: number | null;
   clinicId: string;
   isAvailable?: boolean;
+  // Computed by the backend's Live/Available engine on every list/search
+  // result. Schedules are deliberately NOT included here (too heavy for a
+  // list) — fetch them separately per-doctor-per-clinic when booking.
+  liveStatus?: DoctorLiveStatus;
+  schedules?: DoctorScheduleSlot[];
   user: { id?: string; name: string; email?: string; phone?: string | null; isActive?: boolean };
   clinic: { id: string; clinicName: string; city: string | null; address: string | null };
 };
