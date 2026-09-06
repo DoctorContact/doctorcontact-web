@@ -17,7 +17,7 @@ import { Link, useRouter } from "@/i18n/routing";
 
 import LanguageSwitcher from "./LanguageSwitcher";
 import NotificationBell from "./NotificationBell";
-import LiveDoctorsButton from "./LiveDoctorsButton"; // NEW: Imported LiveDoctorsButton
+import LiveDoctorsButton from "./LiveDoctorsButton";
 
 export default function Header() {
   const t = useTranslations("HomePage");
@@ -30,6 +30,7 @@ export default function Header() {
   const [open, setOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
 
+    // Clinics land on /clinic, Doctors on /doctor/dashboard, Diagnostic Centers on /diagnosticCenter/dashboard, Staff on /diagnosticCenter/referrals, Admins on /admin/dashboard, Receptionists on /receptionist/dashboard, Patients on /patient.
   const isClinic = user?.role === "CLINIC";
   const isDoctor = user?.role === "DOCTOR";
   const isDiagnosticCenter = user?.role === "DIAGNOSTIC_CENTER";
@@ -37,7 +38,6 @@ export default function Header() {
   const isSuperAdmin = user?.role === "SUPER_ADMIN";
   const isAdmin = user?.role === "ADMIN";
   const isReceptionist = user?.role === "RECEPTIONIST";
-  
   const dashboardHref = isClinic
     ? "/clinic"
     : isDoctor
@@ -53,7 +53,6 @@ export default function Header() {
               : isReceptionist
                 ? "/receptionist/dashboard"
                 : "/patient";
-                
   const dashboardLabel = isClinic
     ? dash("clinicPanel")
     : isDoctor
@@ -78,17 +77,17 @@ export default function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/95 shadow-[0_8px_30px_rgba(15,23,42,0.06)] backdrop-blur-xl transition-colors dark:border-soft-300/80 dark:bg-surface/95">
-      <div className="mx-auto flex h-[72px] max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-50 border-b border-gray-200 bg-white shadow-sm transition-colors dark:border-soft-300 dark:bg-surface">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* ================= LOGO ================= */}
-        <Link href="/" className="group flex items-center gap-2.5">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 ring-1 ring-blue-100 transition duration-300 group-hover:scale-105 group-hover:shadow-md dark:from-blue-500/10 dark:to-cyan-500/10 dark:ring-blue-400/10">
+        <Link href="/" className="flex items-center gap-2.5">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-500/10">
             <Image
               src="/logo-icon.png"
               alt="Doctor Contact"
               width={36}
               height={36}
-              className="h-9 w-9 object-contain transition-transform duration-300 group-hover:rotate-1"
+              className="h-9 w-9 object-contain"
               priority
             />
           </div>
@@ -98,17 +97,17 @@ export default function Header() {
             alt="Doctor Contact"
             width={130}
             height={36}
-            className="h-8 w-auto object-contain sm:h-9"
+            className="h-8 sm:h-9 w-auto object-contain"
             priority
           />
         </Link>
 
         {/* ================= DESKTOP NAV ================= */}
-        <div className="hidden items-center gap-2.5 md:flex">
+        <div className="hidden items-center gap-3 md:flex">
           {/* Available Doctors */}
           <Link
             href="/doctors/available"
-            className="rounded-full bg-gradient-to-r from-blue-600 to-blue-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-blue-500/20 transition-all duration-200 hover:-translate-y-0.5 hover:from-blue-700 hover:to-blue-600 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+            className="rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
           >
             {nav("availableDoctors")}
           </Link>
@@ -116,7 +115,7 @@ export default function Header() {
           {/* Available Clinics */}
           <Link
             href="/clinics/available"
-            className="rounded-full border border-blue-200 bg-blue-50/50 px-4 py-2.5 text-sm font-semibold text-blue-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-300 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-blue-400/20 dark:bg-blue-500/5 dark:text-blue-300"
+            className="rounded-full border border-[var(--color-primary)]/25 px-4 py-2 text-sm font-semibold text-[var(--color-primary-text)] transition hover:bg-[var(--color-primary)]/5"
           >
             {nav("availableClinics")}
           </Link>
@@ -124,19 +123,19 @@ export default function Header() {
           {/* Apply for Listing */}
           <Link
             href="/#clinics"
-            className="rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-400/20 dark:border-soft-300 dark:bg-transparent dark:text-ink-700 dark:hover:bg-soft-50"
+            className="rounded-full border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 dark:border-soft-300 dark:text-ink-700 dark:hover:bg-soft-50"
           >
             {nav("applyForListing")}
           </Link>
 
           {/* Divider */}
-          <span className="mx-1 h-7 w-px bg-gradient-to-b from-transparent via-slate-200 to-transparent dark:via-soft-300" />
+          <span className="mx-1 h-6 w-px bg-gray-200" />
 
           {/* Language */}
           <LanguageSwitcher />
 
-          {/* NEW: Real-Time Live Doctors Indicator (Replaced ThemeToggle) */}
-          <LiveDoctorsButton />
+          {/* Live Doctors (was Dark Mode toggle) */}
+          <LiveDoctorsButton compact />
 
           {/* Notification Bell - Desktop */}
           {user && <NotificationBell />}
@@ -146,10 +145,10 @@ export default function Header() {
             <div className="relative">
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex items-center gap-2 rounded-full border border-transparent px-2.5 py-1.5 transition-all duration-200 hover:border-slate-200 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:hover:border-soft-300 dark:hover:bg-soft-50"
+                className="flex items-center gap-2 rounded-full px-3 py-1.5 transition hover:bg-gray-50 dark:hover:bg-soft-50"
               >
                 {/* Avatar */}
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-cyan-500 text-white shadow-sm shadow-blue-500/20 ring-2 ring-white dark:ring-surface">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300">
                   <span className="text-sm font-bold">
                     {user.name?.charAt(0).toUpperCase() || "U"}
                   </span>
@@ -165,23 +164,23 @@ export default function Header() {
 
               {/* ================= USER DROPDOWN ================= */}
               {showUserMenu && (
-                <div className="absolute right-0 mt-3 w-56 origin-top-right overflow-hidden rounded-2xl border border-slate-200/80 bg-white/95 py-1.5 shadow-[0_18px_45px_rgba(15,23,42,0.14)] backdrop-blur-xl dark:border-soft-300 dark:bg-surface/95">
+                <div className="absolute right-0 mt-2 w-48 rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-soft-300 dark:bg-surface">
                   {/* Dashboard */}
                   <Link
                     href={dashboardHref}
                     onClick={() => setShowUserMenu(false)}
-                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 transition-colors hover:bg-slate-50 dark:text-ink-700 dark:hover:bg-soft-50"
+                    className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-ink-700 dark:hover:bg-soft-50"
                   >
                     <LayoutDashboard className="h-4 w-4" />
                     {dashboardLabel}
                   </Link>
 
                   {/* Profile — patients only */}
-                  {!isClinic && !isDoctor && !isDiagnosticCenter && !isDiagnosticStaff && !isAdmin && !isSuperAdmin && (
+                  {!isClinic && !isDoctor && !isDiagnosticCenter && !isDiagnosticStaff && !isAdmin && (
                     <Link
                       href="/patient/profile"
                       onClick={() => setShowUserMenu(false)}
-                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 transition-colors hover:bg-slate-50 dark:text-ink-700 dark:hover:bg-soft-50"
+                      className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-ink-700 dark:hover:bg-soft-50"
                     >
                       <User className="h-4 w-4" />
                       {dash("profile")}
@@ -193,7 +192,7 @@ export default function Header() {
                   {/* Logout */}
                   <button
                     onClick={handleLogout}
-                    className="flex w-full items-center gap-3 px-4 py-2.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10"
+                    className="flex w-full items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10"
                   >
                     <LogOut className="h-4 w-4" />
                     {dash("logout")}
@@ -206,14 +205,14 @@ export default function Header() {
             <div className="flex items-center gap-2">
               <Link
                 href="/login"
-                className="rounded-full px-4 py-2.5 text-sm font-semibold text-blue-600 transition-all hover:bg-blue-50 hover:text-blue-700 dark:hover:bg-blue-500/10"
+                className="px-4 py-2 text-sm font-semibold text-blue-600 transition hover:text-blue-700"
               >
                 {t("login")}
               </Link>
 
               <Link
                 href="/register"
-                className="rounded-full bg-gradient-to-r from-blue-600 to-blue-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-blue-500/20 transition-all duration-200 hover:-translate-y-0.5 hover:from-blue-700 hover:to-blue-600 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                className="rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
               >
                 {t("register")}
               </Link>
@@ -223,8 +222,8 @@ export default function Header() {
 
         {/* ================= MOBILE HEADER ================= */}
         <div className="flex items-center gap-2 md:hidden">
-          {/* NEW: Real-Time Live Doctors Indicator (Mobile) */}
-          <LiveDoctorsButton />
+          {/* Live Doctors (was Dark Mode toggle) */}
+          <LiveDoctorsButton compact />
 
           {/* Notification Bell - Mobile */}
           {user && <NotificationBell />}
@@ -232,7 +231,7 @@ export default function Header() {
           {/* Menu Button */}
           <button
             onClick={() => setOpen(!open)}
-            className="rounded-xl border border-slate-200 p-2.5 text-slate-600 transition-all hover:border-slate-300 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-soft-300 dark:text-ink-600 dark:hover:bg-soft-100"
+            className="rounded-lg p-2 text-gray-600 transition hover:bg-gray-100 dark:text-ink-600 dark:hover:bg-soft-100"
             aria-label={open ? "Close menu" : "Open menu"}
           >
             {open ? (
@@ -246,13 +245,13 @@ export default function Header() {
 
       {/* ================= MOBILE MENU ================= */}
       {open && (
-        <div className="border-t border-slate-200/80 bg-white/98 shadow-[0_16px_35px_rgba(15,23,42,0.08)] backdrop-blur-xl md:hidden dark:border-soft-300 dark:bg-surface/98">
-          <div className="space-y-2.5 px-4 py-4 sm:px-6">
+        <div className="border-t border-gray-200 bg-white md:hidden dark:border-soft-300 dark:bg-surface">
+          <div className="space-y-2 px-4 py-4">
             {user ? (
               <>
                 {/* ================= MOBILE USER INFO ================= */}
-                <div className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-gradient-to-r from-slate-50 to-blue-50/60 p-3.5 dark:border-soft-100 dark:from-soft-50 dark:to-blue-500/5">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-cyan-500 text-white shadow-sm">
+                <div className="flex items-center gap-3 rounded-lg bg-gray-50 p-3 dark:bg-soft-50">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300">
                     <span className="font-bold">
                       {user.name?.charAt(0).toUpperCase() || "U"}
                     </span>
@@ -282,7 +281,7 @@ export default function Header() {
                 <Link
                   href="/doctors/available"
                   onClick={() => setOpen(false)}
-                  className="block rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 px-4 py-3 text-center text-sm font-semibold text-white shadow-sm shadow-blue-500/20 transition-all hover:-translate-y-0.5 hover:from-blue-700 hover:to-blue-600"
+                  className="block rounded-lg bg-blue-600 px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-blue-700"
                 >
                   {nav("availableDoctors")}
                 </Link>
@@ -291,7 +290,7 @@ export default function Header() {
                 <Link
                   href="/clinics/available"
                   onClick={() => setOpen(false)}
-                  className="block rounded-xl border border-blue-200 bg-blue-50/50 px-4 py-3 text-center text-sm font-semibold text-blue-700 transition-all hover:-translate-y-0.5 hover:bg-blue-50 dark:border-blue-400/20 dark:bg-blue-500/5 dark:text-blue-300"
+                  className="block rounded-lg border border-[var(--color-primary)]/25 px-4 py-3 text-center text-sm font-semibold text-[var(--color-primary-text)] transition hover:bg-[var(--color-primary)]/5"
                 >
                   {nav("availableClinics")}
                 </Link>
@@ -300,7 +299,7 @@ export default function Header() {
                 <Link
                   href="/#clinics"
                   onClick={() => setOpen(false)}
-                  className="block rounded-xl border border-slate-200 bg-white px-4 py-3 text-center text-sm font-semibold text-slate-700 transition-all hover:-translate-y-0.5 hover:bg-slate-50 dark:border-soft-300 dark:bg-transparent dark:text-ink-700 dark:hover:bg-soft-50"
+                  className="block rounded-lg border border-gray-300 px-4 py-3 text-center text-sm font-semibold text-gray-700 transition hover:bg-gray-50 dark:border-soft-300 dark:text-ink-700 dark:hover:bg-soft-50"
                 >
                   {nav("applyForListing")}
                 </Link>
@@ -309,18 +308,18 @@ export default function Header() {
                 <Link
                   href={dashboardHref}
                   onClick={() => setOpen(false)}
-                  className="block rounded-xl px-4 py-3 text-sm font-medium text-gray-700 transition-colors hover:bg-slate-50 dark:text-ink-700 dark:hover:bg-soft-50"
+                  className="block rounded-lg px-4 py-3 text-sm text-gray-700 transition hover:bg-gray-50 dark:text-ink-700 dark:hover:bg-soft-50"
                 >
                   <LayoutDashboard className="mr-2 inline h-4 w-4" />
                   {dashboardLabel}
                 </Link>
 
                 {/* ================= PROFILE (patients only) ================= */}
-                {!isClinic && !isDoctor && !isDiagnosticCenter && !isDiagnosticStaff && !isAdmin && !isSuperAdmin && (
+                {!isClinic && !isDoctor && !isDiagnosticCenter && !isDiagnosticStaff && (
                   <Link
-                    href="/patient/profile"
+                    href="/dashboard/profile"
                     onClick={() => setOpen(false)}
-                    className="block rounded-xl px-4 py-3 text-sm font-medium text-gray-700 transition-colors hover:bg-slate-50 dark:text-ink-700 dark:hover:bg-soft-50"
+                    className="block rounded-lg px-4 py-3 text-sm text-gray-700 transition hover:bg-gray-50 dark:text-ink-700 dark:hover:bg-soft-50"
                   >
                     <User className="mr-2 inline h-4 w-4" />
                     {dash("profile")}
@@ -332,7 +331,7 @@ export default function Header() {
                 {/* ================= LOGOUT ================= */}
                 <button
                   onClick={handleLogout}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10"
+                  className="flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-medium text-red-600 transition hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10"
                 >
                   <LogOut className="h-4 w-4" />
                   {dash("logout")}
@@ -341,30 +340,35 @@ export default function Header() {
             ) : (
               <>
                 {/* ================= GUEST MOBILE ================= */}
+
+                {/* Available Doctors */}
                 <Link
                   href="/doctors/available"
                   onClick={() => setOpen(false)}
-                  className="block rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 px-4 py-3 text-center text-sm font-semibold text-white shadow-sm shadow-blue-500/20 transition-all hover:-translate-y-0.5 hover:from-blue-700 hover:to-blue-600"
+                  className="block rounded-lg bg-blue-600 px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-blue-700"
                 >
                   {nav("availableDoctors")}
                 </Link>
 
+                {/* Available Clinics */}
                 <Link
                   href="/clinics"
                   onClick={() => setOpen(false)}
-                  className="block rounded-xl border border-blue-200 bg-blue-50/50 px-4 py-3 text-center text-sm font-semibold text-blue-700 transition-all hover:-translate-y-0.5 hover:bg-blue-50 dark:border-blue-400/20 dark:bg-blue-500/5 dark:text-blue-300"
+                  className="block rounded-lg border border-[var(--color-primary)]/25 px-4 py-3 text-center text-sm font-semibold text-[var(--color-primary-text)] transition hover:bg-[var(--color-primary)]/5"
                 >
                   {nav("availableClinics")}
                 </Link>
 
+                {/* Apply for Listing */}
                 <Link
                   href="/#clinics"
                   onClick={() => setOpen(false)}
-                  className="block rounded-xl border border-slate-200 bg-white px-4 py-3 text-center text-sm font-semibold text-slate-700 transition-all hover:-translate-y-0.5 hover:bg-slate-50 dark:border-soft-300 dark:bg-transparent dark:text-ink-700 dark:hover:bg-soft-50"
+                  className="block rounded-lg border border-gray-300 px-4 py-3 text-center text-sm font-semibold text-gray-700 transition hover:bg-gray-50 dark:border-soft-300 dark:text-ink-700 dark:hover:bg-soft-50"
                 >
                   {nav("applyForListing")}
                 </Link>
 
+                {/* Login / Register */}
                 <div className="grid grid-cols-2 gap-3 pt-2">
                   <Link
                     href="/login"
@@ -385,6 +389,7 @@ export default function Header() {
               </>
             )}
 
+            {/* ================= MOBILE LANGUAGE ================= */}
             <div className="pt-3 text-center">
               <LanguageSwitcher />
             </div>

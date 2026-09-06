@@ -1,60 +1,87 @@
 "use client";
 
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/routing";
 import { useState } from "react";
 import Image from "next/image";
 import {
   User,
-  Mail,
   Phone,
-  Lock,
-  Eye,
-  EyeOff,
   CalendarCheck,
   Clock,
   ShieldCheck,
   ArrowRight,
   Loader2,
   AlertCircle,
-  CheckCircle2,
   MessageCircle,
   Sparkles,
+  Edit2,
 } from "lucide-react";
-import { registerSchema, type RegisterInput } from "@doctor-contract/shared";
-import { api } from "@/lib/api";
+import { api, setAccessToken } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
+import { usePhoneAuth } from "@/lib/hooks/usePhoneAuth";
+import OtpInput from "@/components/auth/OtpInput";
 
 const CLINIC_PHONE = "+919777777777";
 const CLINIC_WHATSAPP = "919777777777";
+const RECAPTCHA_CONTAINER_ID = "register-recaptcha-container";
 
 export default function RegisterPage() {
   const t = useTranslations("AuthPage");
   const router = useRouter();
+  const { setUser } = useAuth();
+  const { step, phone, loading, error, sendOtp, confirmOtp, reset } = usePhoneAuth();
+
+  const [phoneInput, setPhoneInput] = useState("");
+  const [otp, setOtp] = useState("");
+  const [name, setName] = useState("");
+  const [needsName, setNeedsName] = useState(false);
   const [serverError, setServerError] = useState("");
-  const [success, setSuccess] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<RegisterInput>({ resolver: zodResolver(registerSchema) });
-
-  async function onSubmit(values: RegisterInput) {
+  async function handleSendOtp() {
     setServerError("");
     try {
-      await api.post("/auth/register", values);
-      setSuccess(true);
-      setTimeout(() => router.push("/login"), 1500);
+      await sendOtp(phoneInput, RECAPTCHA_CONTAINER_ID);
+    } catch {
+      // usePhoneAuth already captured the error message
+    }
+  }
+
+  async function finishAuth(idToken: string, withName?: string) {
+    setSubmitting(true);
+    setServerError("");
+    try {
+      const { data } = await api.post("/auth/patient/phone", {
+        idToken,
+        ...(withName && { name: withName }),
+      });
+      setAccessToken(data.data.accessToken);
+      setUser(data.data.user);
+      router.push("/patient");
     } catch (err: unknown) {
       if (typeof err === "object" && err !== null && "response" in err) {
-        const responseData = (err as { response?: { data?: { message?: string } } }).response?.data;
-        setServerError(responseData?.message || t("genericError"));
+        const response = (err as { response?: { data?: { message?: string }; status?: number } }).response;
+        if (response?.status === 400 && response.data?.message?.toLowerCase().includes("name")) {
+          setNeedsName(true);
+        } else {
+          setServerError(response?.data?.message || t("genericError"));
+        }
       } else {
         setServerError(t("genericError"));
       }
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleConfirmOtp() {
+    setServerError("");
+    try {
+      const idToken = await confirmOtp(otp);
+      await finishAuth(idToken, needsName ? name : undefined);
+    } catch {
+      // usePhoneAuth already captured the error message
     }
   }
 
@@ -168,7 +195,7 @@ export default function RegisterPage() {
         </div>
 
         {/* ============================================================
-            RIGHT REGISTRATION FORM
+            RIGHT REGISTRATION FORM — Phone + OTP (patients only)
         ============================================================ */}
         <div className="flex flex-col justify-between p-6 sm:p-10 lg:col-span-7 xl:p-12">
           {/* Mobile Header (Shown on small screens) */}
@@ -205,156 +232,129 @@ export default function RegisterPage() {
               <h1 className="text-2xl font-extrabold tracking-tight text-[var(--color-primary-dark-text)] sm:text-3xl">
                 {t("registerHeading")}
               </h1>
-              <p className="text-sm text-gray-500 dark:text-ink-500">{t("registerSubtitle")}</p>
+              <p className="text-sm text-gray-500 dark:text-ink-500">{t("registerPhoneSubtitle")}</p>
             </div>
 
-            {/* Form */}
-            <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-3.5">
-              {/* Full Name Field */}
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-ink-700">
-                  {t("nameLabel")}
-                </label>
-                <div className="relative">
-                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-gray-400 dark:text-ink-400">
-                    <User className="h-4 w-4" />
-                  </div>
-                  <input
-                    {...register("name")}
-                    placeholder={t("namePlaceholder")}
-                    className="w-full rounded-xl border border-gray-200 bg-gray-50/50 py-2.5 pr-4 pl-10 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-[var(--color-primary)] focus:bg-white focus:ring-4 focus:ring-[var(--color-primary)]/10 dark:border-soft-300 dark:bg-surface-100 dark:text-ink-900 dark:placeholder:text-ink-400 dark:focus:bg-surface"
-                  />
-                </div>
-                {errors.name && (
-                  <p className="mt-1.5 flex items-center gap-1 text-xs text-red-600 dark:text-red-400">
-                    <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                    <span>{errors.name.message}</span>
-                  </p>
-                )}
-              </div>
+            {/* Invisible reCAPTCHA anchor — required by Firebase, renders nothing visible */}
+            <div id={RECAPTCHA_CONTAINER_ID} />
 
-              {/* Email Field */}
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-ink-700">
-                  {t("emailLabel")}
-                </label>
-                <div className="relative">
-                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-gray-400 dark:text-ink-400">
-                    <Mail className="h-4 w-4" />
+            <div className="mt-6 space-y-3.5">
+              {step === "enter-phone" && (
+                <>
+                  <div>
+                    <label className="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-ink-700">
+                      {t("phoneLabel")}
+                    </label>
+                    <div className="relative">
+                      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-gray-400 dark:text-ink-400">
+                        <Phone className="h-4 w-4" />
+                      </div>
+                      <input
+                        value={phoneInput}
+                        onChange={(e) => setPhoneInput(e.target.value)}
+                        type="tel"
+                        inputMode="tel"
+                        placeholder={t("phonePlaceholder")}
+                        className="w-full rounded-xl border border-gray-200 bg-gray-50/50 py-2.5 pr-4 pl-10 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-[var(--color-primary)] focus:bg-white focus:ring-4 focus:ring-[var(--color-primary)]/10 dark:border-soft-300 dark:bg-surface-100 dark:text-ink-900 dark:placeholder:text-ink-400 dark:focus:bg-surface"
+                      />
+                    </div>
                   </div>
-                  <input
-                    {...register("email")}
-                    type="email"
-                    placeholder={t("emailPlaceholder")}
-                    className="w-full rounded-xl border border-gray-200 bg-gray-50/50 py-2.5 pr-4 pl-10 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-[var(--color-primary)] focus:bg-white focus:ring-4 focus:ring-[var(--color-primary)]/10 dark:border-soft-300 dark:bg-surface-100 dark:text-ink-900 dark:placeholder:text-ink-400 dark:focus:bg-surface"
-                  />
-                </div>
-                {errors.email && (
-                  <p className="mt-1.5 flex items-center gap-1 text-xs text-red-600 dark:text-red-400">
-                    <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                    <span>{errors.email.message}</span>
-                  </p>
-                )}
-              </div>
 
-              {/* Phone Field */}
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-ink-700">
-                  {t("phoneLabel")}{" "}
-                  <span className="font-normal text-gray-400 dark:text-ink-400">
-                    {t("phoneOptional")}
-                  </span>
-                </label>
-                <div className="relative">
-                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-gray-400 dark:text-ink-400">
-                    <Phone className="h-4 w-4" />
-                  </div>
-                  <input
-                    {...register("phone")}
-                    placeholder={t("phonePlaceholder")}
-                    className="w-full rounded-xl border border-gray-200 bg-gray-50/50 py-2.5 pr-4 pl-10 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-[var(--color-primary)] focus:bg-white focus:ring-4 focus:ring-[var(--color-primary)]/10 dark:border-soft-300 dark:bg-surface-100 dark:text-ink-900 dark:placeholder:text-ink-400 dark:focus:bg-surface"
-                  />
-                </div>
-                {errors.phone && (
-                  <p className="mt-1.5 flex items-center gap-1 text-xs text-red-600 dark:text-red-400">
-                    <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                    <span>{errors.phone.message}</span>
-                  </p>
-                )}
-              </div>
+                  {(error || serverError) && (
+                    <div className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700 sm:text-sm dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300">
+                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                      <span>{error || serverError}</span>
+                    </div>
+                  )}
 
-              {/* Password Field */}
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-ink-700">
-                  {t("passwordLabel")}
-                </label>
-                <div className="relative">
-                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-gray-400 dark:text-ink-400">
-                    <Lock className="h-4 w-4" />
-                  </div>
-                  <input
-                    {...register("password")}
-                    type={showPassword ? "text" : "password"}
-                    placeholder={t("passwordPlaceholder")}
-                    className="w-full rounded-xl border border-gray-200 bg-gray-50/50 py-2.5 pr-11 pl-10 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-[var(--color-primary)] focus:bg-white focus:ring-4 focus:ring-[var(--color-primary)]/10 dark:border-soft-300 dark:bg-surface-100 dark:text-ink-900 dark:placeholder:text-ink-400 dark:focus:bg-surface"
-                  />
                   <button
                     type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-gray-400 transition hover:text-gray-600 dark:text-ink-400 dark:hover:text-ink-200"
-                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    onClick={handleSendOtp}
+                    disabled={loading || phoneInput.length < 10}
+                    className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#1B3A8C] to-[#12295E] py-3 text-sm font-semibold text-white shadow-lg shadow-blue-900/20 transition-all hover:from-[#152e70] hover:to-[#0c1c42] hover:shadow-xl active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4" />
+                    {loading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>{t("sendingOtp")}</span>
+                      </>
                     ) : (
-                      <Eye className="h-4 w-4" />
+                      <>
+                        <span>{t("sendOtp")}</span>
+                        <ArrowRight className="h-4 w-4" />
+                      </>
                     )}
                   </button>
-                </div>
-                {errors.password && (
-                  <p className="mt-1.5 flex items-center gap-1 text-xs text-red-600 dark:text-red-400">
-                    <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                    <span>{errors.password.message}</span>
-                  </p>
-                )}
-              </div>
-
-              {/* Server Error Alert */}
-              {serverError && (
-                <div className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700 sm:text-sm dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300">
-                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-                  <span>{serverError}</span>
-                </div>
+                </>
               )}
 
-              {/* Success Alert */}
-              {success && (
-                <div className="flex items-start gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-700 sm:text-sm dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
-                  <span>{t("registerSuccess")}</span>
-                </div>
+              {step === "enter-otp" && (
+                <>
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-gray-600 dark:text-ink-600">
+                      {t("otpSentTo")} <span className="font-semibold">{phone}</span>
+                    </p>
+                    <button
+                      type="button"
+                      onClick={reset}
+                      className="flex items-center gap-1 text-xs font-medium text-[var(--color-primary-text)] hover:underline"
+                    >
+                      <Edit2 className="h-3 w-3" />
+                      {t("editNumber")}
+                    </button>
+                  </div>
+
+                  <OtpInput value={otp} onChange={setOtp} disabled={submitting} />
+
+                  {needsName && (
+                    <div>
+                      <label className="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-ink-700">
+                        {t("nameLabel")}
+                      </label>
+                      <div className="relative">
+                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-gray-400 dark:text-ink-400">
+                          <User className="h-4 w-4" />
+                        </div>
+                        <input
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          placeholder={t("namePlaceholder")}
+                          className="w-full rounded-xl border border-gray-200 bg-gray-50/50 py-2.5 pr-4 pl-10 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-[var(--color-primary)] focus:bg-white focus:ring-4 focus:ring-[var(--color-primary)]/10 dark:border-soft-300 dark:bg-surface-100 dark:text-ink-900 dark:placeholder:text-ink-400 dark:focus:bg-surface"
+                        />
+                      </div>
+                      <p className="mt-1.5 text-xs text-gray-400 dark:text-ink-400">{t("firstTimeNameHint")}</p>
+                    </div>
+                  )}
+
+                  {(error || serverError) && (
+                    <div className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700 sm:text-sm dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300">
+                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                      <span>{error || serverError}</span>
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handleConfirmOtp}
+                    disabled={loading || submitting || otp.length < 6 || (needsName && name.trim().length < 2)}
+                    className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#1B3A8C] to-[#12295E] py-3 text-sm font-semibold text-white shadow-lg shadow-blue-900/20 transition-all hover:from-[#152e70] hover:to-[#0c1c42] hover:shadow-xl active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {loading || submitting ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>{t("verifying")}</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>{t("verifyAndContinue")}</span>
+                        <ArrowRight className="h-4 w-4" />
+                      </>
+                    )}
+                  </button>
+                </>
               )}
 
-              {/* Submit Button */}
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#1B3A8C] to-[#12295E] py-3 text-sm font-semibold text-white shadow-lg shadow-blue-900/20 transition-all hover:from-[#152e70] hover:to-[#0c1c42] hover:shadow-xl active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>{t("submitRegisterLoading")}</span>
-                  </>
-                ) : (
-                  <>
-                    <span>{t("submitRegister")}</span>
-                    <ArrowRight className="h-4 w-4" />
-                  </>
-                )}
-              </button>
-
-              {/* Login Link */}
+              {/* Staff Login Link */}
               <div className="pt-2 text-center text-sm text-gray-500 dark:text-ink-500">
                 {t("haveAccount")}{" "}
                 <Link
@@ -364,7 +364,7 @@ export default function RegisterPage() {
                   {t("loginLink")}
                 </Link>
               </div>
-            </form>
+            </div>
           </div>
 
           {/* Quick Clinic Onboarding & Support Link */}

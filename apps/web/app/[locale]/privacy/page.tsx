@@ -72,8 +72,8 @@ export default async function PrivacyPage({ params }: Props) {
               <h2 className="text-lg font-bold text-gray-900 dark:text-ink-900">{t("contactHeading")}</h2>
               <p className="mt-3 text-[15px] leading-relaxed text-gray-600 dark:text-ink-600">
                 {t("contactBody")}{" "}
-                <a href="mailto:support@doctorcontract.in" className="text-[var(--color-primary-text)] hover:underline">
-                  support@doctorcontract.in
+                <a href="mailto:doctorcontact620@gmail.com" className="text-[var(--color-primary-text)] hover:underline">
+                  doctorcontact620@gmail.com
                 </a>
               </p>
             </section>

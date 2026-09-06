@@ -33,7 +33,7 @@
     "searchUnifiedPlaceholder": "नाम या स्थान द्वारा खोजें..."
   },
   "Specialties": {
-    "title": "विशेषज्ञता द्वारा खोजें",
+    "heading": "विशेषज्ञता द्वारा खोजें",
     "subtitle": "अपनी आवश्यकता के अनुसार उपयुक्त डॉक्टर सीधे चुनें।",
     "cardiology": "हृदय रोग (कार्डियोलॉजी)",
     "pediatrics": "बाल रोग (पीडियाट्रिक्स)",
@@ -96,7 +96,20 @@
     "clinicSubtitle": "त्वरित सत्यापन के बाद हमारी टीम द्वारा क्लिनिक खाते सेट किए जाते हैं - संपर्क करें और हम आपको जोड़ेंगे।",
     "clinicCall": "कॉल करें",
     "clinicWhatsapp": "व्हाट्सएप",
-    "clinicEmail": "ईमेल करें"
+    "clinicEmail": "ईमेल करें",
+    "registerPhoneSubtitle": "शुरू करने के लिए अपना मोबाइल नंबर दर्ज करें — कोई पासवर्ड नहीं चाहिए।",
+    "sendOtp": "OTP भेजें",
+    "sendingOtp": "OTP भेजा जा रहा है...",
+    "otpSentTo": "OTP भेजा गया",
+    "editNumber": "नंबर बदलें",
+    "verifying": "सत्यापित किया जा रहा है...",
+    "verifyAndContinue": "सत्यापित करें और आगे बढ़ें",
+    "firstTimeNameHint": "पहली बार आए हैं — खाता बनाने के लिए अपना नाम बताएं।",
+    "staffLoginLink": "क्लिनिक, डॉक्टर या स्टाफ? यहाँ लॉगिन करें",
+    "patientLoginTab": "मरीज़",
+    "staffLoginTab": "क्लिनिक / डॉक्टर / स्टाफ",
+    "emailOrPhoneLabel": "ईमेल या फ़ोन नंबर",
+    "emailOrPhonePlaceholder": "ईमेल पता या मोबाइल नंबर"
   },
   "Dashboard": {
     "welcome": "वापसी पर स्वागत है",
@@ -185,7 +198,15 @@
     "cancelBooking": "बुकिंग रद्द करें",
     "pleaseSelectDateTime": "कृपया तारीख और समय दोनों चुनें",
     "pastDateError": "कृपया भविष्य की तारीख और समय चुनें",
-    "cancel": "रद्द करें"
+    "cancel": "रद्द करें",
+    "liveNow": "अभी लाइव",
+    "runningLate": "देर हो रही है",
+    "liveNowBanner": "अभी जो डॉक्टर लाइव सेशन में हैं वे दिखाए जा रहे हैं",
+    "pleaseSelectSchedule": "कृपया एक सेशन और तारीख चुनें",
+    "loadingSessions": "सेशन लोड हो रहे हैं...",
+    "noSessionsAvailable": "कोई ऑनलाइन सेशन उपलब्ध नहीं",
+    "selectSession": "एक सेशन चुनें",
+    "dateMustMatchSession": "वह तारीख चुनें जिस दिन यह सेशन वाकई चलता है — नहीं तो साफ़ त्रुटि दिखेगी।"
   },
   "Notifications": {
     "heading": "सूचनाएं",
@@ -1309,5 +1330,8 @@
     ],
     "contactHeading": "अपने डेटा को लेकर सवाल हैं?",
     "contactBody": "हमसे संपर्क करें"
+  },
+  "Header": {
+    "liveDoctors": "लाइव डॉक्टर"
   }
 }

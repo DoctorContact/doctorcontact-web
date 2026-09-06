@@ -1,228 +1,385 @@
 "use client";
 
-import React from "react";
-import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
-import { MapPin, Stethoscope, BadgeCheck, Star, Award } from "lucide-react";
-import type { Doctor as SharedDoctor } from "@doctor-contract/shared";
-import { Link } from "@/i18n/routing";
+import { useState } from "react";
+import { useTranslations } from "next-intl";
+import { Calendar, Star, Heart, Clock, BadgeCheck, Stethoscope, Award, Loader2, CalendarCheck, Building2, Radio, AlertTriangle } from "lucide-react";
+import { useAuth } from "@/lib/auth-context";
+import { useRouter, Link } from "@/i18n/routing";
+import { useDoctorSearch, useDoctorSchedules, useBookAppointment } from "@/lib/hooks/useDoctorSearch";
+import { ExtendedDoctor } from "@/types/doctor";
+import DoctorClinicInfo from "@/components/DoctorClinicInfo";
 
-export type ExtendedDoctor = SharedDoctor & {
-  isVerified?: boolean;
-  isFeatured?: boolean;
-  experience?: number;
-  rating?: number;
-  reviewCount?: number;
-  clinic?: { clinicName: string; city?: string; };
-  user: { name: string; email: string; phone?: string; avatar?: string | null; };
-  // NEW: Real-time Live Status payload from Backend
-  liveStatus?: {
-    isLive: boolean;
-    isAvailable: boolean;
-    reason: string;
-    capacity?: { booked: number; max: number } | null;
-  };
-};
-
-function getInitials(name?: string): string {
-  if (!name || typeof name !== "string") return "DR";
-  return name.trim().split(/\s+/).filter(Boolean).map((part) => part.charAt(0)).slice(0, 2).join("").toUpperCase();
+function scheduleLabel(startTime: string, endTime: string) {
+  return `${startTime} – ${endTime}`;
 }
 
-function getDoctorAvatar(doctor: ExtendedDoctor) {
-  return (doctor as ExtendedDoctor & { profilePhoto?: string | null; }).profilePhoto ?? doctor.user?.avatar ?? null;
+function initials(name: string) {
+  return name.split(" ").filter(Boolean).map((part) => part[0]).slice(0, 2).join("").toUpperCase();
 }
 
-function ExperienceBadge({ years }: { years: number; }) {
+function GradientBorderCard({ children, className }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div className={`relative rounded-[24px] p-[3px] bg-gradient-to-br from-[#2563EB] via-[#0F766E] to-[#14B8A6] shadow-[0_4px_20px_rgba(0,0,0,0.06)] transition-all duration-300 hover:shadow-[0_8px_30px_rgba(37,99,235,0.12)] ${className}`}>
+      <div className="rounded-[calc(24px-2.5px)] bg-white dark:bg-slate-900 h-full">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function ExperienceBadge({ years }: { years: number }) {
   if (!years || years <= 0) return null;
   return (
-    <div className="absolute bottom-0 left-0 z-10 translate-y-1/2">
-      <div className="flex items-center gap-1 rounded-full border border-white/90 bg-[#252a67]/95 px-2.5 py-1 shadow-[0_5px_14px_rgba(37,42,103,0.35)] backdrop-blur-sm">
-        <Award className="h-3 w-3 shrink-0 text-amber-300" strokeWidth={2.5} />
-        <span className="whitespace-nowrap text-[10px] font-extrabold tracking-wide text-white">{years}+ yrs</span>
+    <div className="absolute bottom-1.5 left-1.5 z-10">
+      <div className="flex items-center gap-1 rounded-full border border-white/80 bg-[#252a67]/95 px-2 py-0.5 shadow-sm backdrop-blur-sm">
+        <Award className="h-2.5 w-2.5 text-amber-300" strokeWidth={2.5} />
+        <span className="whitespace-nowrap text-[9px] font-bold tracking-wide text-white">
+          {years}+ yrs
+        </span>
       </div>
     </div>
   );
 }
 
-function DoctorCard({ doctor }: { doctor: ExtendedDoctor; }) {
-  const location = doctor.clinic?.city ?? doctor.clinic?.clinicName;
-  const experience = doctor.experience ?? 0;
-  const rating = doctor.rating ?? 4.5;
-  const reviews = doctor.reviewCount ?? 0;
-  const avatar = getDoctorAvatar(doctor);
+export default function DoctorGrid({
+  query,
+  city,
+  liveNow,
+  availableToday,
+}: {
+  query: string;
+  city?: string;
+  liveNow?: boolean;
+  availableToday?: boolean;
+}) {
+  const t = useTranslations("DoctorSearch");
+  const { data, isLoading } = useDoctorSearch(query, city, { liveNow, availableToday });
+  const doctors = (data as ExtendedDoctor[]) ?? [];
 
   return (
-    <Link href={`/doctors/${doctor.id}`} aria-label={`View profile of ${doctor.user.name}`} className="group block h-full min-w-0 outline-none">
-      <div className="relative h-full rounded-2xl p-[3px] bg-gradient-to-br from-[#252a67] via-[#3b4a8f] to-[#14B8A6] shadow-[0_4px_20px_-6px_rgba(37,42,103,0.35)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_14px_38px_-8px_rgba(20,184,166,0.30)]">
-        <div className="h-full overflow-hidden rounded-[calc(1rem-3px)] bg-white dark:bg-slate-900">
-          <div className="p-3 sm:p-4 lg:p-4.5 xl:p-5">
-            <div className="flex flex-col items-center text-center lg:flex-row lg:items-start lg:text-left">
-              
-              {/* DOCTOR PHOTO */}
-              <div className="relative mb-5 h-40 w-32 shrink-0 sm:h-44 sm:w-34 lg:mb-0 lg:mr-4 lg:h-40 lg:w-32 xl:h-44 xl:w-34">
-                
-                {/* NEW: LIVE DOT WITH CAPACITY OVERLAY */}
-                {doctor.liveStatus?.isLive && (
-                  <div className="absolute -top-2 -right-2 z-30 flex items-center gap-1.5 rounded-full bg-red-500 px-2.5 py-1 text-[10px] font-extrabold text-white shadow-md ring-2 ring-white dark:ring-slate-900">
-                    <span className="relative flex h-2 w-2">
-                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-100 opacity-75"></span>
-                      <span className="relative inline-flex h-2 w-2 rounded-full bg-white"></span>
-                    </span>
-                    LIVE
-                    {doctor.liveStatus.capacity && (
-                      <span className="ml-1 border-l border-red-300 pl-1.5">
-                        {doctor.liveStatus.capacity.booked}/{doctor.liveStatus.capacity.max}
-                      </span>
-                    )}
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 lg:gap-5">
+      {isLoading && (
+        <div className="col-span-full flex flex-col items-center justify-center py-16">
+          <div className="relative">
+            <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#2563EB] border-t-transparent" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Stethoscope className="h-4 w-4 text-[#2563EB]" />
+            </div>
+          </div>
+          <p className="mt-3 text-sm font-semibold text-slate-500">{t("loading") || "Finding the best doctors..."}</p>
+        </div>
+      )}
+
+      {!isLoading && doctors?.length === 0 && (
+        <div className="col-span-full flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-12 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-slate-400">
+            <Clock className="h-6 w-6" />
+          </div>
+          <p className="mt-3 text-base font-bold text-slate-800">{t("noResults")}</p>
+          <p className="mt-1 text-sm text-slate-500">{t("adjustFilters") || "Try adjusting your search or filters"}</p>
+        </div>
+      )}
+
+      {doctors?.map((doctor) => (
+        <DoctorCard key={doctor.id} doctor={doctor} />
+      ))}
+    </div>
+  );
+}
+
+function DoctorCard({ doctor }: { doctor: ExtendedDoctor }) {
+  const t = useTranslations("DoctorSearch");
+  const { user } = useAuth();
+  const router = useRouter();
+
+  const [showBooking, setShowBooking] = useState(false);
+  const [date, setDate] = useState("");
+  const [scheduleId, setScheduleId] = useState("");
+
+  // ================= Clinic Selection State =================
+  const defaultClinicId = doctor.allClinics?.[0]?.id || (doctor as any).clinicId;
+  const [selectedClinicId, setSelectedClinicId] = useState(defaultClinicId);
+
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  const bookMutation = useBookAppointment();
+  const { data: schedules, isLoading: schedulesLoading } = useDoctorSchedules(
+    showBooking ? doctor.id : undefined,
+    showBooking ? selectedClinicId : undefined
+  );
+  const bookableSchedules = (schedules ?? []).filter((s) => s.isActive && s.onlineBookingEnabled !== false);
+
+  function handleBookClick() {
+    if (!user) {
+      router.push("/login?redirect=/doctors");
+      return;
+    }
+    setMessage(null);
+    setShowBooking((v) => !v);
+    if (!showBooking) {
+      setDate("");
+      setScheduleId("");
+    }
+  }
+
+  function handleConfirmBooking() {
+    if (!date || !scheduleId) {
+      setMessage({ type: "error", text: t("pleaseSelectSchedule") || "Please select a session and date" });
+      return;
+    }
+
+    bookMutation.mutate(
+      { doctorId: doctor.id, clinicId: selectedClinicId, scheduleId, date },
+      {
+        onSuccess: (appointment) => {
+          setMessage({ type: "success", text: `${t("bookSuccess")} #${appointment.token}` });
+          setDate("");
+          setScheduleId("");
+          setTimeout(() => {
+            setShowBooking(false);
+            setMessage(null);
+          }, 5000);
+        },
+        onError: (error: any) =>
+          setMessage({ type: "error", text: error?.response?.data?.message || error.message || t("bookError") }),
+      }
+    );
+  }
+
+  const experienceYears = doctor.experience ?? 0;
+  const rating = doctor.rating ?? 4.5;
+  const reviews = doctor.reviewCount ?? 120;
+  const liveStatus = doctor.liveStatus;
+  const isLive = liveStatus?.isLive ?? false;
+  const isAvailable = liveStatus ? liveStatus.isAvailable : doctor.isAvailable;
+  const avatarSrc = (doctor as any).profilePhoto || doctor.user?.avatar;
+
+  return (
+    <GradientBorderCard className="h-full">
+      <div className="flex h-full flex-col p-4 relative overflow-hidden">
+        <div className="pointer-events-none absolute -top-10 -right-10 h-20 w-20 rounded-full bg-gradient-to-br from-[#2563EB]/5 to-[#0F766E]/10 blur-2xl" />
+
+        <div className="relative mx-auto w-full max-w-[150px] sm:max-w-[150px] aspect-[3/4] overflow-hidden rounded-xl border-2 border-[#252a67]">
+          {avatarSrc ? (
+            <img src={avatarSrc} alt={doctor.user.name} className="h-full w-full object-cover" />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#2563EB] to-[#6a7583] text-2xl font-bold text-white">
+              {initials(doctor.user.name)}
+            </div>
+          )}
+          <ExperienceBadge years={experienceYears} />
+          <BadgeCheck className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full bg-white text-[#2563EB] shadow-sm ring-1 ring-white dark:bg-slate-800 dark:ring-slate-700" />
+          <button
+            type="button"
+            onClick={() => setIsFavorite(!isFavorite)}
+            className="absolute right-1.5 top-1.5 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-white/90 text-slate-400 shadow-sm backdrop-blur-sm transition-all hover:scale-105 hover:text-red-500 active:scale-95"
+          >
+            <Heart className={`h-3.5 w-3.5 transition-colors ${isFavorite ? "fill-red-500 text-red-500" : "text-slate-400"}`} />
+          </button>
+        </div>
+
+        <div className="relative mt-3 flex flex-col items-center text-center">
+          <h3 className="truncate text-base font-bold tracking-tight">
+            <span className="bg-gradient-to-r from-[#422995] to-[#4a9860] bg-clip-text text-transparent">
+              {doctor.user.name}
+            </span>
+          </h3>
+
+          {doctor.qualification && (
+            <p className="mt-0.5 truncate text-xs font-medium text-slate-600 dark:text-slate-300">
+              {doctor.qualification}
+            </p>
+          )}
+
+          {doctor.specialization && (
+            <p className="mt-0.5 flex items-center gap-1 truncate text-xs text-slate-500 dark:text-slate-400">
+              <Stethoscope className="h-3 w-3 shrink-0 text-[#14B8A6]" />
+              {doctor.specialization}
+            </p>
+          )}
+
+          <div className="mt-1.5 flex items-center gap-1">
+            <div className="flex items-center gap-0.5">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <Star key={star} className={`h-3 w-3 ${star <= Math.round(rating) ? "fill-amber-400 text-amber-400" : "fill-slate-200 text-slate-200"}`} />
+              ))}
+            </div>
+            <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">{rating}</span>
+            <span className="text-[10px] text-slate-400">· {reviews}</span>
+          </div>
+        </div>
+
+        <div className="my-3 h-px w-full bg-slate-100 dark:bg-slate-800" />
+
+        <div className="relative w-full">
+           <DoctorClinicInfo doctor={doctor} />
+        </div>
+
+        <div className="relative mt-3 flex flex-col items-center gap-1 text-xs font-medium">
+          {isLive && (
+            <div className="flex items-center gap-1.5">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
+              </span>
+              <span className="flex items-center gap-1 text-red-600 dark:text-red-400">
+                <Radio className="h-3 w-3" />
+                {t("liveNow") || "Live Now"}
+              </span>
+              {liveStatus?.capacity && (
+                <span className="text-[10px] text-slate-400">
+                  · {liveStatus.capacity.booked}/{liveStatus.capacity.max}
+                </span>
+              )}
+            </div>
+          )}
+
+          {liveStatus?.operationalStatus === "RUNNING_LATE" && (
+            <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
+              <AlertTriangle className="h-3 w-3" />
+              <span className="text-[11px]">
+                {t("runningLate") || "Running late"}
+                {liveStatus.delayMinutes ? ` · ~${liveStatus.delayMinutes} min` : ""}
+              </span>
+            </div>
+          )}
+
+          {isAvailable ? (
+            <div className="flex items-center gap-1.5">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+              </span>
+              <span className="text-emerald-600 dark:text-emerald-400">{t("availableNow") || "Available Now"}</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5">
+              <span className="relative flex h-2 w-2">
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-slate-400" />
+              </span>
+              <span className="text-slate-500 dark:text-slate-400">{t("currentlyUnavailable") || "Currently Unavailable"}</span>
+            </div>
+          )}
+        </div>
+
+        <div className="relative mt-4 grid grid-cols-2 gap-2">
+          <Link
+            href={`/doctors/${doctor.id}`}
+            className="flex items-center justify-center rounded-lg border border-slate-200 bg-white px-2 py-2 text-[11px] font-semibold text-slate-600 transition-all hover:border-slate-300 hover:text-slate-800 active:scale-[0.98] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:text-slate-100"
+          >
+            {t("viewProfile") || "View Profile"}
+          </Link>
+          <button
+            type="button"
+            onClick={handleBookClick}
+            className="flex items-center justify-center rounded-lg bg-gradient-to-r from-[#252a67] to-[#14B8A6] px-2 py-2 text-[11px] font-semibold text-white shadow-sm shadow-[#14B8A6]/20 transition-all hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98]"
+          >
+            {showBooking ? t("cancel") || "Cancel" : t("bookButton")}
+          </button>
+        </div>
+
+        {/* ================= BOOKING MODAL ================= */}
+        {showBooking && user && (
+          <div className="relative mt-3 animate-in slide-in-from-top-2 fade-in duration-300">
+            <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3 dark:border-slate-700 dark:bg-slate-800/40">
+              <div className="mb-2">
+                <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">{t("bookAppointment") || "Book an appointment"}</p>
+                <p className="mt-0.5 text-[10px] text-slate-500">{t("selectDatePrompt") || "Select your preferred date and time."}</p>
+              </div>
+
+              <div className="space-y-2">
+                {/* Clinic Selector Dropdown */}
+                {doctor.allClinics && doctor.allClinics.length > 0 && (
+                  <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-2 transition-all focus-within:border-[#252a67] focus-within:ring-2 focus-within:ring-[#252a67]/20 dark:border-slate-700 dark:bg-slate-900">
+                    <Building2 className="h-3.5 w-3.5 shrink-0 text-[#252a67]" />
+                    <select
+                      value={selectedClinicId}
+                      onChange={(e) => setSelectedClinicId(e.target.value)}
+                      className="w-full bg-transparent text-xs font-medium text-slate-700 outline-none dark:text-slate-200 cursor-pointer appearance-none"
+                    >
+                      {doctor.allClinics.map((c) => (
+                        <option key={c.id} value={c.id} className="text-slate-800 dark:text-slate-200">
+                          {c.clinicName} {c.city ? `(${c.city})` : ""} - ₹{c.associationDetails?.fee || doctor.fee}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 )}
 
-                <div className="absolute inset-0 overflow-hidden rounded-xl border-2 border-[#252a67] bg-slate-100 shadow-[0_6px_18px_rgba(37,42,103,0.16)] dark:bg-slate-800">
-                  {avatar ? (
-                    <img src={avatar} alt={doctor.user.name} loading="lazy" className="h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-[1.035]" />
+                <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-2 transition-all focus-within:border-[#252a67] focus-within:ring-2 focus-within:ring-[#252a67]/20 dark:border-slate-700 dark:bg-slate-900">
+                  <Clock className="h-3.5 w-3.5 shrink-0 text-[#252a67]" />
+                  {schedulesLoading ? (
+                    <span className="text-xs text-slate-400">{t("loadingSessions") || "Loading sessions..."}</span>
+                  ) : bookableSchedules.length === 0 ? (
+                    <span className="text-xs text-slate-400">{t("noSessionsAvailable") || "No online sessions available"}</span>
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#252a67] to-[#14B8A6] text-2xl font-bold text-white">
-                      {getInitials(doctor.user.name)}
-                    </div>
+                    <select
+                      value={scheduleId}
+                      onChange={(e) => { setScheduleId(e.target.value); setMessage(null); }}
+                      className="w-full cursor-pointer appearance-none bg-transparent text-xs font-medium text-slate-700 outline-none dark:text-slate-200"
+                    >
+                      <option value="">{t("selectSession") || "Select a session"}</option>
+                      {bookableSchedules.map((s) => (
+                        <option key={s.id} value={s.id} className="text-slate-800 dark:text-slate-200">
+                          {scheduleLabel(s.startTime, s.endTime)} (max {s.maxPatients})
+                        </option>
+                      ))}
+                    </select>
                   )}
                 </div>
-                <ExperienceBadge years={experience} />
-                {doctor.isVerified !== false && (
-                  <BadgeCheck className="absolute -bottom-2 -right-2 z-20 h-6 w-6 rounded-full bg-white p-[1px] text-[#2563EB] shadow-md ring-2 ring-white dark:bg-slate-900 dark:ring-slate-900" />
-                )}
-              </div>
 
-              {/* DOCTOR DETAILS */}
-              <div className="min-w-0 flex-1">
-                <h3 className="truncate text-base font-extrabold tracking-tight text-slate-900 dark:text-white lg:text-[17px] xl:text-lg">
-                  <span className="bg-gradient-to-r from-[#252a67] to-[#14B8A6] bg-clip-text text-transparent">
-                    {doctor.user.name}
-                  </span>
-                </h3>
-                {doctor.qualification && (
-                  <p className="mt-1 truncate text-xs font-semibold text-slate-700 dark:text-slate-300">{doctor.qualification}</p>
-                )}
-                {doctor.specialization && (
-                  <p className="mt-1 flex min-w-0 items-center justify-center gap-1 text-xs text-slate-500 lg:justify-start dark:text-slate-400">
-                    <Stethoscope className="h-3 w-3 shrink-0 text-teal-600" />
-                    <span className="truncate">{doctor.specialization}</span>
-                  </p>
-                )}
-                <div className="mt-2 flex items-center justify-center gap-1 lg:justify-start">
-                  <div className="flex items-center gap-0.5">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <Star key={star} className={`h-3 w-3 ${star <= Math.round(rating) ? "fill-amber-400 text-amber-400" : "fill-slate-200 text-slate-200"}`} />
-                    ))}
-                  </div>
-                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">{rating.toFixed(1)}</span>
-                  <span className="text-[10px] text-slate-400">({reviews})</span>
+                <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-2 transition-all focus-within:border-[#252a67] focus-within:ring-2 focus-within:ring-[#252a67]/20 dark:border-slate-700 dark:bg-slate-900">
+                  <Calendar className="h-3.5 w-3.5 shrink-0 text-[#252a67]" />
+                  <input
+                    type="date"
+                    value={date}
+                    onChange={(e) => { setDate(e.target.value); setMessage(null); }}
+                    min={new Date().toISOString().split("T")[0]}
+                    className="w-full bg-transparent text-xs font-medium text-slate-700 outline-none dark:text-slate-200"
+                  />
                 </div>
-                {doctor.fee != null && (
-                  <p className="mt-1.5 text-sm font-bold text-[#252a67] dark:text-blue-400">
-                    ₹{doctor.fee} <span className="text-xs font-normal text-slate-400"> / visit</span>
-                  </p>
-                )}
-                {location && (
-                  <p className="mt-1 flex min-w-0 items-center justify-center gap-1 text-xs text-slate-500 lg:justify-start dark:text-slate-400">
-                    <MapPin className="h-3 w-3 shrink-0 text-gray-400" />
-                    <span className="truncate">{location}</span>
-                  </p>
-                )}
+                <p className="px-0.5 text-[10px] text-slate-400">
+                  {t("dateMustMatchSession") || "Pick a date this session actually runs on — you'll get a clear error otherwise."}
+                </p>
               </div>
+
+              <button
+                type="button"
+                onClick={handleConfirmBooking}
+                disabled={!date || !scheduleId || bookMutation.isPending}
+                className="mt-3 flex w-full items-center justify-center rounded-lg bg-gradient-to-r from-[#0F766E] to-[#14B8A6] px-3 py-2 text-xs font-semibold text-white shadow-sm shadow-teal-500/20 transition-all hover:shadow-md hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-md"
+              >
+                {bookMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <span className="ml-1.5">{t("bookingLoading")}</span>
+                  </>
+                ) : (
+                  t("confirmBooking") || "Confirm Booking"
+                )}
+              </button>
+
+              {message && (
+                <div
+                  className={`mt-2 flex items-start gap-1.5 rounded-lg border p-2 text-[11px] font-medium ${
+                    message.type === "success"
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400"
+                      : "border-red-200 bg-red-50 text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-400"
+                  }`}
+                >
+                  {message.type === "success" ? (
+                    <CalendarCheck className="h-3.5 w-3.5 shrink-0" />
+                  ) : (
+                    <Clock className="h-3.5 w-3.5 shrink-0" />
+                  )}
+                  <span>{message.text}</span>
+                </div>
+              )}
             </div>
           </div>
-        </div>
+        )}
       </div>
-    </Link>
-  );
-}
-
-function GridSkeleton() {
-  return (
-    <div className="h-full min-h-[210px] rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4 dark:border-slate-800 dark:bg-slate-900">
-      <div className="flex flex-col items-center gap-4 lg:flex-row lg:items-start">
-        <div className="h-40 w-32 shrink-0 animate-pulse rounded-xl bg-slate-200 sm:h-44 sm:w-34 lg:h-40 lg:w-32 xl:h-44 xl:w-34 dark:bg-slate-800" />
-        <div className="flex w-full flex-1 flex-col items-center space-y-2 lg:items-start">
-          <div className="h-4 w-3/4 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
-          <div className="h-3 w-1/2 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
-          <div className="h-3 w-2/3 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
-          <div className="h-3 w-1/3 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// NEW: Accepts props from DoctorsPage to drive the API call
-export default function DoctorGrid({ query, city, liveNow }: { query?: string; city?: string; liveNow?: boolean; }) {
-  
-  // NEW: Connects directly to the Advanced Search backend API
-  const { data: doctors = [], isLoading } = useQuery({
-    queryKey: ["doctors-search", query, city, liveNow],
-    queryFn: async () => {
-      const params = new URLSearchParams();
-      if (query) params.append("query", query);
-      if (city) params.append("city", city);
-      if (liveNow) params.append("liveNow", "true");
-
-      const res = await api.get(`/doctors/advanced-search?${params.toString()}`);
-      return res.data?.data?.doctors as ExtendedDoctor[] || [];
-    }
-  });
-
-  if (isLoading) {
-    return (
-      <section className="mx-auto w-full px-3 sm:px-4 lg:px-5">
-        <div className="mb-4 sm:mb-5">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#252a67]/[0.07] text-[#252a67]"><Stethoscope className="h-4 w-4" /></div>
-            <div>
-              <h2 className="text-lg font-extrabold tracking-tight text-slate-900 dark:text-white">Searching Doctors...</h2>
-            </div>
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 lg:gap-5 xl:gap-6">
-          {Array.from({ length: 6 }).map((_, index) => <GridSkeleton key={index} />)}
-        </div>
-      </section>
-    );
-  }
-
-  if (doctors.length === 0) {
-    return (
-      <section className="mx-auto w-full px-3 sm:px-4 lg:px-5">
-        <div className="flex min-h-[260px] flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 px-6 text-center dark:border-slate-800 dark:bg-slate-900/50">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#252a67]/[0.07] text-[#252a67] dark:bg-blue-950/40 dark:text-blue-400"><Stethoscope className="h-6 w-6" /></div>
-          <h3 className="mt-4 text-sm font-bold text-slate-800 dark:text-slate-200">No doctors available</h3>
-          <p className="mt-1 max-w-sm text-xs leading-5 text-slate-500 dark:text-slate-400">We couldn't find any doctors matching the current filters.</p>
-        </div>
-      </section>
-    );
-  }
-
-  return (
-    <section className="mx-auto w-full px-3 pt-4 sm:px-4 sm:pt-5 lg:px-5 lg:pt-6">
-      <div className="mb-4 sm:mb-5">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#252a67]/[0.07] text-[#252a67] sm:h-9 sm:w-9"><Stethoscope className="h-4 w-4 sm:h-[18px] sm:w-[18px]" /></div>
-          <div className="min-w-0">
-            <h2 className="text-lg font-extrabold tracking-tight text-slate-900 sm:text-xl dark:text-white">
-              {liveNow ? "Live Doctors" : "Available Doctors"}
-            </h2>
-            <p className="mt-0.5 text-[10px] leading-relaxed text-slate-500 sm:text-xs dark:text-slate-400">Find the right doctor for your consultation.</p>
-          </div>
-        </div>
-        <div className="mt-2.5 inline-flex items-center gap-1.5 rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-1 text-[9px] font-bold text-emerald-700 sm:text-[10px]">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-          {doctors.length} {doctors.length === 1 ? "Doctor" : "Doctors"} Available
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 lg:gap-5 xl:gap-6">
-        {doctors.map((doctor) => (
-          <DoctorCard key={doctor.id} doctor={doctor} />
-        ))}
-      </div>
-    </section>
+    </GradientBorderCard>
   );
 }

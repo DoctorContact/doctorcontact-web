@@ -33,7 +33,7 @@
     "searchUnifiedPlaceholder": "Search by name or location..."
   },
   "Specialties": {
-    "title": "Search by Specialty",
+    "heading": "Search by Specialty",
     "subtitle": "Jump straight to the kind of doctor you need.",
     "cardiology": "Cardiology",
     "pediatrics": "Pediatrics",
@@ -96,7 +96,20 @@
     "clinicSubtitle": "Clinic accounts are set up by our team after a quick verification - reach out and we will get you onboarded.",
     "clinicCall": "Call us",
     "clinicWhatsapp": "WhatsApp",
-    "clinicEmail": "Email us"
+    "clinicEmail": "Email us",
+    "registerPhoneSubtitle": "Enter your mobile number to get started — no password needed.",
+    "sendOtp": "Send OTP",
+    "sendingOtp": "Sending OTP...",
+    "otpSentTo": "OTP sent to",
+    "editNumber": "Edit number",
+    "verifying": "Verifying...",
+    "verifyAndContinue": "Verify & Continue",
+    "firstTimeNameHint": "First time here — tell us your name to finish creating your account.",
+    "staffLoginLink": "Clinic, Doctor, or Staff? Login here",
+    "patientLoginTab": "Patient",
+    "staffLoginTab": "Clinic / Doctor / Staff",
+    "emailOrPhoneLabel": "Email or Phone",
+    "emailOrPhonePlaceholder": "Email address or mobile number"
   },
   "Dashboard": {
     "welcome": "Welcome back",
@@ -185,7 +198,15 @@
     "cancelBooking": "Cancel",
     "pleaseSelectDateTime": "Please select both date and time",
     "pastDateError": "Please select a future date and time",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "liveNow": "Live Now",
+    "runningLate": "Running late",
+    "liveNowBanner": "Showing doctors currently live in session right now",
+    "pleaseSelectSchedule": "Please select a session and date",
+    "loadingSessions": "Loading sessions...",
+    "noSessionsAvailable": "No online sessions available",
+    "selectSession": "Select a session",
+    "dateMustMatchSession": "Pick a date this session actually runs on — you'll get a clear error otherwise."
   },
   "Notifications": {
     "heading": "Notifications",
@@ -1320,5 +1341,8 @@
     ],
     "contactHeading": "Questions about your data?",
     "contactBody": "Reach us at"
+  },
+  "Header": {
+    "liveDoctors": "Live Doctors"
   }
 }
