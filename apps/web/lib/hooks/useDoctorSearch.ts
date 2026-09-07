@@ -5,21 +5,29 @@ import { api } from "@/lib/api";
 export function useDoctorSearch(
   query: string,
   city?: string,
-  filters?: { specializationId?: string; maxFee?: number; availableToday?: boolean; liveNow?: boolean }
+  filters?: { liveNow?: boolean; availableToday?: boolean }
 ) {
-  return useQuery<Doctor[]>({
-    queryKey: ["doctors", "search", query, city ?? "", filters ?? {}],
+  return useQuery({
+    // 🟢 FIX: queryKey-তে filters অ্যাড করা হলো, যাতে ট্যাব চেঞ্জ হলে নতুন করে API কল হয়
+    queryKey: [
+      "doctors", 
+      "search", 
+      query, 
+      city, 
+      filters?.liveNow, 
+      filters?.availableToday
+    ],
     queryFn: async () => {
-      const params: Record<string, string> = {};
-      if (query) params.query = query;
-      if (city) params.city = city;
-      if (filters?.specializationId) params.specializationId = filters.specializationId;
-      if (filters?.maxFee) params.maxFee = String(filters.maxFee);
-      if (filters?.availableToday) params.availableToday = "true";
-      if (filters?.liveNow) params.liveNow = "true";
-      const { data } = await api.get("/doctors/search", { params });
-      return data.data.doctors;
-    },
+      const res = await api.get('/doctors/advanced-search', {
+        params: {
+          query: query || undefined,
+          city: city || undefined,
+          liveNow: filters?.liveNow ? "true" : undefined,
+          availableToday: filters?.availableToday ? "true" : undefined
+        }
+      });
+      return res.data?.data?.doctors || res.data?.data || [];
+    }
   });
 }
 

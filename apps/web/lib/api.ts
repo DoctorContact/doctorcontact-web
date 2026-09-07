@@ -2,7 +2,7 @@ import axios from "axios";
 
 export const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
-  withCredentials: true,
+  withCredentials: true, 
 });
 
 let accessToken: string | null = null;
@@ -11,6 +11,7 @@ export function setAccessToken(token: string | null) {
   accessToken = token;
 }
 
+// Request Interceptor
 api.interceptors.request.use((config) => {
   if (accessToken) {
     config.headers.Authorization = "Bearer " + accessToken;
@@ -18,26 +19,64 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Response Interceptor
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    // যদি 401 Unauthorized এরর আসে (যেমন: Refresh token invalid)
-    if (error.response && error.response.status === 401) {
-      
-      // ১. Local Storage থেকে টোকেন ক্লিয়ার করুন
-      localStorage.removeItem("token");
-      localStorage.removeItem("refreshToken");
-      localStorage.removeItem("user");
+    const originalRequest = error.config;
 
-      // ২. Cookie থেকেও টোকেন ক্লিয়ার করুন (এটাই লুপ তৈরি করছিল)
-      document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-      document.cookie = "refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    if (
+      error.response?.status === 401 &&
+      originalRequest &&
+      !originalRequest._retry &&
+      !originalRequest.url?.includes("/auth/refresh") &&
+      !originalRequest.url?.includes("/auth/login")
+    ) {
+      originalRequest._retry = true;
 
-      // ৩. ব্রাউজার চেক করে রিডাইরেক্ট করুন
-      if (typeof window !== "undefined") {
+      try {
+        // 🟢 Update: লোকাল স্টোরেজ থেকে রিফ্রেশ টোকেন নিয়ে বডিতে পাঠানো
+        const localRefreshToken = typeof window !== "undefined" ? localStorage.getItem("refreshToken") : null;
+        
+        const res = await axios.post(
+          `${process.env.NEXT_PUBLIC_API_URL}/auth/refresh`,
+          { refreshToken: localRefreshToken }, // বডিতে পাঠানো হচ্ছে
+          { withCredentials: true }
+        );
+
+        const newAccessToken = res.data?.data?.accessToken;
+        const newRefreshToken = res.data?.data?.refreshToken; // ব্যাকএন্ড থেকে নতুন রিফ্রেশ টোকেন আসলে
+        
+        if (newAccessToken) {
+          setAccessToken(newAccessToken);
+          if (newRefreshToken && typeof window !== "undefined") {
+             localStorage.setItem("refreshToken", newRefreshToken); // লোকাল স্টোরেজ আপডেট
+          }
+          
+          originalRequest.headers.Authorization = "Bearer " + newAccessToken;
+          return api(originalRequest); 
+        }
+      } catch (refreshError) {
+        return handleLogoutAndRedirect(refreshError);
+      }
+    }
+
+    if (error.response?.status === 401 && originalRequest.url?.includes("/auth/refresh")) {
+         return handleLogoutAndRedirect(error);
+    }
+
+    return Promise.reject(error);
+  }
+);
+
+function handleLogoutAndRedirect(error: any) {
+    setAccessToken(null);
+    if (typeof window !== "undefined") {
+        localStorage.removeItem("token");
+        localStorage.removeItem("refreshToken");
+        localStorage.removeItem("user");
+        
         const currentPath = window.location.pathname;
-
-        // যেসব পেজে 401 আসলেও লগইনে পাঠাবে না (Public Pages)
         const isPublicRoute = 
           currentPath === "/" ||
           currentPath.match(/^\/(en|bn|hi)\/?$/) ||
@@ -48,22 +87,17 @@ api.interceptors.response.use(
           currentPath.includes("/clinics");
 
         if (!isPublicRoute) {
-          // শুধুমাত্র প্রোটেক্টেড পেজ (Admin/Doctor/Patient/Receptionist) হলেই লগইনে পাঠাবে
           window.location.href = "/login";
         }
-      }
     }
     return Promise.reject(error);
-  }
-);
+}
 
-// === User / Profile API Calls (Doctor Photo Upload) ===
 // === User / Profile API Calls (Universal Photo Upload) ===
 export const uploadProfilePhoto = async (file: File) => {
   const formData = new FormData();
   formData.append("photo", file); 
 
-  // সবার জন্য এই একটাই API কল হবে
   const response = await api.post('/users/me/photo', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
@@ -71,8 +105,8 @@ export const uploadProfilePhoto = async (file: File) => {
   });
   return response.data;
 };
-// === Location API Calls ===
 
+// === Location API Calls ===
 export const addSearchLocation = async (locationData: { nameEn: string; nameBn: string; nameHi: string; isActive?: boolean }) => {
   const response = await api.post('/locations', locationData);
   return response.data;
@@ -104,8 +138,6 @@ export const deleteSearchLocation = async (id: string) => {
 };
 
 // === Admin / Super Admin API Calls ===
-
-// Mark or Unmark Doctor as Featured
 export const setFeaturedDoctor = async (
   doctorId: string, 
   isFeatured: boolean, 
@@ -118,18 +150,39 @@ export const setFeaturedDoctor = async (
   return response.data;
 };
 
-// Fetch All Featured Doctors
 export const fetchFeaturedDoctors = async () => {
   const response = await api.get('/admin/doctors/featured');
   return response.data?.data?.doctors || [];
 };
 
-// For Admin Panel - Fetch All Doctors for dropdown
-export const fetchAllDoctorsForAdmin = async () => {
-  const response = await api.get('/admin/users?role=DOCTOR&limit=100');
-  return response.data?.data?.users || [];
+export const fetchAllDoctors = async () => {
+  try {
+    const response = await api.get('/doctors');
+    return response.data?.data || [];
+  } catch (error) {
+    console.error("Failed to fetch all doctors:", error);
+    return [];
+  }
 };
 
+export const fetchLiveDoctors = async () => {
+  try {
+    const response = await api.get('/doctors/live');
+    return response.data?.data || [];
+  } catch (error) {
+    console.error("Failed to fetch live doctors:", error);
+    return [];
+  }
+};
+export const fetchAvailableDoctors = async () => {
+  try {
+    const response = await api.get('/doctors/available');
+    return response.data?.data || [];
+  } catch (error) {
+    console.error("Failed to fetch available doctors:", error);
+    return [];
+  }
+};
 
 // --- Announcements (Public / Global) ---
 export const fetchAnnouncements = async () => {
@@ -142,8 +195,9 @@ export const fetchAnnouncements = async () => {
   }
 };
 
-// --- Admin Announcements Management ---
 
+
+// --- Admin Announcements Management ---
 export const fetchAdminAnnouncements = async () => {
   try {
     const response = await api.get('/announcements/admin');
@@ -169,7 +223,6 @@ export const deactivateAnnouncement = async (id: string) => {
   const response = await api.patch(`/announcements/${id}/deactivate`);
   return response.data;
 };
-
 
 // --- Notifications ---
 export const fetchMyNotifications = async () => {

@@ -20,11 +20,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loadUser = useCallback(async () => {
     try {
-      const refreshRes = await api.post("/auth/refresh");
-      setAccessToken(refreshRes.data.data.accessToken);
-      const meRes = await api.get("/auth/me");
-      setUserState(meRes.data.data.user);
-    } catch {
+      // 🟢 Update: লোকাল স্টোরেজ থেকে রিফ্রেশ টোকেন নেওয়া
+      const localRefreshToken = typeof window !== "undefined" ? localStorage.getItem("refreshToken") : null;
+
+      const refreshRes = await api.post("/auth/refresh", {
+          refreshToken: localRefreshToken // বডিতে পাঠানো হচ্ছে
+      });
+      
+      const token = refreshRes.data?.data?.accessToken;
+      const newRefreshToken = refreshRes.data?.data?.refreshToken;
+      
+      if (token) {
+         setAccessToken(token);
+         if (newRefreshToken && typeof window !== "undefined") {
+             localStorage.setItem("refreshToken", newRefreshToken);
+         }
+         
+         const meRes = await api.get("/auth/me");
+         setUserState(meRes.data?.data?.user);
+      } else {
+         throw new Error("No token received");
+      }
+    } catch (err) {
       setAccessToken(null);
       setUserState(null);
     } finally {
@@ -40,10 +57,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await api.post("/auth/logout");
     } catch {
-      // ignore -- local state is cleared regardless
+      // ignore
     }
     setAccessToken(null);
     setUserState(null);
+    
+    if (typeof window !== "undefined") {
+        localStorage.removeItem("token");
+        localStorage.removeItem("refreshToken");
+        localStorage.removeItem("user");
+        window.location.href = "/login";
+    }
   }
 
   return (

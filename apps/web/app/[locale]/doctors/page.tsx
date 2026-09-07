@@ -3,7 +3,10 @@
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { MapPin, Loader2, Pencil, X, Navigation, CheckCircle2, Building2, Sparkles, Search, Radio } from "lucide-react";
+import { 
+  MapPin, Loader2, Pencil, X, Navigation, CheckCircle2, 
+  Building2, Sparkles, Search, Radio, CalendarCheck, Users 
+} from "lucide-react";
 import DoctorGrid from "@/components/DoctorGrid";
 import { useLocationCity } from "@/lib/hooks/useLocationCity";
 
@@ -29,9 +32,14 @@ export default function DoctorsPage() {
   const t = useTranslations("DoctorSearch");
   const { city, status, setManualCity } = useLocationCity();
   const searchParams = useSearchParams();
-  const liveNow = searchParams.get("live") === "true";
+  
+  // Default Tab Setup based on URL parameter (if any)
+  const initialTab = searchParams.get("live") === "true" ? "LIVE" 
+                   : searchParams.get("available") === "true" ? "AVAILABLE" 
+                   : "ALL";
 
-  const [query, setQuery] = useState(""); // Search Query State
+  const [activeTab, setActiveTab] = useState<"ALL" | "AVAILABLE" | "LIVE">(initialTab);
+  const [query, setQuery] = useState(""); 
   const [editingLocation, setEditingLocation] = useState(false);
   const [manualInput, setManualInput] = useState("");
 
@@ -74,10 +82,10 @@ export default function DoctorsPage() {
               </div>
 
               <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
-                {t("heading") || "All Doctors"}
+                {t("heading") || "Doctor Directory"}
               </h1>
               <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                {t("subheading") || "Search for trusted doctors near you"}
+                {t("subheading") || "Search and book trusted doctors near you"}
               </p>
             </div>
 
@@ -115,7 +123,7 @@ export default function DoctorsPage() {
                 {status !== "loading" && !editingLocation && city && (
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-sm text-slate-600">
-                      <strong className="text-[#252a67]">{city}</strong>
+                      <strong className="text-[#252a67] dark:text-white">{city}</strong>
                     </span>
                     <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-[#252a67] to-[#14B8A6] px-2 py-0.5 text-[9px] font-bold text-white shadow-sm">
                       <CheckCircle2 className="h-3 w-3" />
@@ -138,10 +146,10 @@ export default function DoctorsPage() {
                       value={manualInput}
                       onChange={(e) => setManualInput(e.target.value)}
                       placeholder={t("locationInputPlaceholder") || "Enter city..."}
-                      className="flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-sm outline-none focus:border-[#14B8A6]"
+                      className="flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-sm outline-none focus:border-[#14B8A6] dark:bg-slate-800 dark:border-slate-700 dark:text-white"
                     />
                     <button type="submit" className="rounded-lg bg-[#252a67] px-3 py-1.5 text-xs text-white">Apply</button>
-                    <button type="button" onClick={cancelEditing} className="text-xs text-slate-500">Cancel</button>
+                    <button type="button" onClick={cancelEditing} className="text-xs text-slate-500 dark:text-slate-400">Cancel</button>
                   </form>
                 )}
               </div>
@@ -153,7 +161,7 @@ export default function DoctorsPage() {
                       <button onClick={() => { setManualInput(city); setEditingLocation(true); }} className="p-2 text-[#0f766e] bg-[#14B8A6]/10 rounded-lg hover:bg-[#14B8A6]/20">
                         <Pencil className="h-3.5 w-3.5" />
                       </button>
-                      <button onClick={clearLocation} className="p-2 text-red-500 bg-red-50 rounded-lg hover:bg-red-100">
+                      <button onClick={clearLocation} className="p-2 text-red-500 bg-red-50 dark:bg-red-500/10 rounded-lg hover:bg-red-100 dark:hover:bg-red-500/20">
                         <X className="h-3.5 w-3.5" />
                       </button>
                     </>
@@ -190,17 +198,61 @@ export default function DoctorsPage() {
         </GradientCard>
       </div>
 
-      {/* Live Now banner */}
-      {liveNow && (
-        <div className="mb-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">
+      {/* ================= FILTER TABS ================= */}
+      <div className="mt-6 flex flex-wrap items-center gap-3 border-b border-slate-200 dark:border-slate-800 pb-4">
+        <button 
+          onClick={() => setActiveTab("ALL")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all ${
+            activeTab === "ALL" 
+            ? "bg-[#252a67] text-white shadow-md" 
+            : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 border border-slate-200 dark:border-slate-700"
+          }`}
+        >
+          <Users className="h-4 w-4" />
+          All Doctors
+        </button>
+
+        <button 
+          onClick={() => setActiveTab("AVAILABLE")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all ${
+            activeTab === "AVAILABLE" 
+            ? "bg-[#14B8A6] text-white shadow-md" 
+            : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 border border-slate-200 dark:border-slate-700"
+          }`}
+        >
+          <CalendarCheck className="h-4 w-4" />
+          Available Today
+        </button>
+
+        <button 
+          onClick={() => setActiveTab("LIVE")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all ${
+            activeTab === "LIVE" 
+            ? "bg-red-500 text-white shadow-md" 
+            : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 border border-slate-200 dark:border-slate-700"
+          }`}
+        >
+          <Radio className={`h-4 w-4 ${activeTab === "LIVE" ? "animate-pulse text-white" : "text-red-500"}`} />
+          Live Now
+        </button>
+      </div>
+
+      {/* Live Now Warning banner */}
+      {activeTab === "LIVE" && (
+        <div className="mt-4 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">
           <Radio className="h-4 w-4 animate-pulse" />
           {t("liveNowBanner") || "Showing doctors currently live in session right now"}
         </div>
       )}
 
       {/* ================= DOCTOR GRID ================= */}
-      <div className="mt-8">
-        <DoctorGrid query={query} city={city ?? undefined} liveNow={liveNow} />
+      <div className="mt-6">
+        <DoctorGrid 
+          query={query} 
+          city={city ?? undefined} 
+          liveNow={activeTab === "LIVE"} 
+          availableToday={activeTab === "AVAILABLE"} 
+        />
       </div>
     </main>
   );

@@ -23,7 +23,7 @@ import {
   User,
   Edit2,
 } from "lucide-react";
-import { loginSchema, type LoginInput } from "@doctor-contract/shared";
+import { loginSchema, type LoginInput, type AuthUser } from "@doctor-contract/shared";
 import { api, setAccessToken } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { usePhoneAuth } from "@/lib/hooks/usePhoneAuth";
@@ -281,7 +281,7 @@ export default function LoginPage() {
 // ==========================================================================
 type LoggedInUser = { role: string; [key: string]: unknown };
 
-function PatientPhoneLogin({ onSuccess }: { onSuccess: (user: LoggedInUser) => void }) {
+function PatientPhoneLogin({ onSuccess }: { onSuccess: (user: AuthUser) => void }) {
   const t = useTranslations("AuthPage");
   const { step, phone, loading, error, sendOtp, confirmOtp, reset } = usePhoneAuth();
   const [phoneInput, setPhoneInput] = useState("");
@@ -309,7 +309,15 @@ function PatientPhoneLogin({ onSuccess }: { onSuccess: (user: LoggedInUser) => v
         idToken,
         ...(needsName && { name }),
       });
+      
       setAccessToken(data.data.accessToken);
+
+      // 🟢 Update: Save Refresh Token & User to LocalStorage
+      if (typeof window !== "undefined") {
+        localStorage.setItem("refreshToken", data.data.refreshToken);
+        localStorage.setItem("user", JSON.stringify(data.data.user));
+      }
+
       onSuccess(data.data.user);
     } catch (err: unknown) {
       if (typeof err === "object" && err !== null && "response" in err) {
@@ -454,7 +462,7 @@ function PatientPhoneLogin({ onSuccess }: { onSuccess: (user: LoggedInUser) => v
 // Super Admin). Detects whether the identifier looks like an email or a
 // phone number and sends the right field to /auth/login.
 // ==========================================================================
-function StaffPasswordLogin({ onSuccess }: { onSuccess: (user: LoggedInUser) => void }) {
+function StaffPasswordLogin({ onSuccess }: { onSuccess: (user: AuthUser) => void }) {
   const t = useTranslations("AuthPage");
   const [serverError, setServerError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -475,6 +483,13 @@ function StaffPasswordLogin({ onSuccess }: { onSuccess: (user: LoggedInUser) => 
 
       const { data } = await api.post("/auth/login", payload);
       setAccessToken(data.data.accessToken);
+
+      // 🟢 Update: Save Refresh Token & User to LocalStorage
+      if (typeof window !== "undefined") {
+        localStorage.setItem("refreshToken", data.data.refreshToken);
+        localStorage.setItem("user", JSON.stringify(data.data.user));
+      }
+
       onSuccess(data.data.user);
     } catch (err: unknown) {
       if (typeof err === "object" && err !== null && "response" in err) {
