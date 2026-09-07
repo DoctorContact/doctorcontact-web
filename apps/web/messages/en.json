@@ -33,7 +33,7 @@
     "searchUnifiedPlaceholder": "Search by name or location..."
   },
   "Specialties": {
-    "heading": "Search by Specialty",
+    "title": "Search by Specialty",
     "subtitle": "Jump straight to the kind of doctor you need.",
     "cardiology": "Cardiology",
     "pediatrics": "Pediatrics",

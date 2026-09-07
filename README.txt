@@ -101,3 +101,41 @@ KNOWN GAPS / NOT DONE
 - useSearchParams() in app/[locale]/doctors/page.tsx may need a
   <Suspense> boundary depending on how Next.js's build handles this
   particular page — worth checking the build output.
+
+
+QUEUE LIVE UPDATES (Socket.io) — no more manual refresh
+============================================================
+Stacks on top of frontend-FULL-final.zip from before (this is
+additive — same files where they overlap, just the newer version).
+
+WHAT CHANGED
+------------
+1. lib/hooks/useDoctor.ts — useDoctorQueue (used by BOTH the doctor
+   queue page and the receptionist queue page — one shared hook, one
+   fix covers both screens) now joins the backend's
+   queue:{doctorId}:{clinicId} Socket.io room and refetches
+   automatically on queueUpdate / tokenCalled / appointmentCompleted
+   / doctorDelay. No setInterval, no polling — purely push-driven,
+   matching the "no polling" rule from the master spec.
+
+2. lib/hooks/useAppointments.ts — useMyAppointments (patient's own
+   "my appointments" list, showing patientsAhead/estimatedWait) now
+   joins the queue room for every doctor+clinic the patient currently
+   has an active (WAITING/CHECKED_IN) appointment with, and refetches
+   the whole list live as the queue moves — so "patients ahead: 3"
+   updates in real time instead of only on page reload.
+
+3. packages/shared/src/types.ts — Appointment type was missing
+   doctorId/clinicId (the backend already returns them, the type
+   just didn't declare them — needed them for the room-joining logic
+   above).
+
+4. app/[locale]/doctors/page.tsx — unchanged from the previous zip,
+   included here again since it's in the same diff; no new edits.
+
+NOT DONE YET
+------------
+- Doctor's OWN dashboard/profile pages (outside the queue screen)
+  don't have live updates — this only covers the queue view and the
+  patient's appointment list.
+- Still no build/compile check — same caveat as before.

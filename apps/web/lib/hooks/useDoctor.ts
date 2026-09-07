@@ -1,5 +1,7 @@
+import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { getSocket } from "@/lib/socket";
 import type {
   Doctor,
   DoctorRequest,
@@ -367,8 +369,51 @@ export function useNotifyDoctorDelay() {
 
 // GET /queue/:doctorId/:clinicId/:date
 export function useDoctorQueue(doctorId: string, clinicId: string, date: string) {
+  const queryClient = useQueryClient();
+  const queryKey = ["doctor", "queue", doctorId, clinicId, date];
+
+  // Live updates — no polling. The backend broadcasts queueUpdate/
+  // tokenCalled/appointmentCompleted/doctorDelay to room
+  // queue:{doctorId}:{clinicId} on every queue-changing action; we just
+  // refetch this exact query when any of them fire.
+  useEffect(() => {
+    if (!doctorId || !clinicId) return;
+
+    const socket = getSocket();
+
+    function join() {
+      socket.emit("joinQueue", { doctorId, clinicId });
+    }
+
+    function refetch() {
+      queryClient.invalidateQueries({ queryKey });
+    }
+
+    if (!socket.connected) {
+      socket.connect();
+    } else {
+      join();
+    }
+
+    socket.on("connect", join);
+    socket.on("queueUpdate", refetch);
+    socket.on("tokenCalled", refetch);
+    socket.on("appointmentCompleted", refetch);
+    socket.on("doctorDelay", refetch);
+
+    return () => {
+      socket.emit("leaveQueue", { doctorId, clinicId });
+      socket.off("connect", join);
+      socket.off("queueUpdate", refetch);
+      socket.off("tokenCalled", refetch);
+      socket.off("appointmentCompleted", refetch);
+      socket.off("doctorDelay", refetch);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [doctorId, clinicId, date]);
+
   return useQuery<DoctorQueue>({
-    queryKey: ["doctor", "queue", doctorId, clinicId, date],
+    queryKey,
     queryFn: async () => {
       try {
         const res = await api.get(`/queue/${doctorId}/${clinicId}/${date}`);

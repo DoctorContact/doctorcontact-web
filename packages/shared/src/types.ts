@@ -14,7 +14,7 @@ export type Role =
 export type AuthUser = {
   id: string;
   name: string;
-  email: string;
+  email: string | null;
   role: Role;
   phone?: string | null;
 };
@@ -52,6 +52,8 @@ export type Appointment = {
   token: number;
   date: string;
   status: AppointmentStatus;
+  doctorId: string;
+  clinicId: string;
   queueMode?: "LIVE" | "PRIVATE";
   patientsAhead?: number;
   estimatedWaitMinutes?: number | null;
