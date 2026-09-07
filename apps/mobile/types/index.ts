@@ -18,7 +18,6 @@ export interface AuthUser {
   name: string;
   email: string;
   role: Role;
-  avatar?: string | null;
   phone?: string | null;
 }
 
@@ -53,7 +52,12 @@ export interface Clinic {
   clinicName: string;
   city?: string | null;
   address?: string | null;
+  state?: string | null;
+  pincode?: string | null;
   phone?: string | null;
+  logo?: string | null;
+  isApproved?: boolean;
+  onlineConsultationEnabled?: boolean;
 }
 
 export interface Doctor {
@@ -302,5 +306,104 @@ export interface ApiResponse<T = unknown> {
   success: boolean;
   message?: string;
   data: T;
+}
+
+export interface ClinicDoctor {
+  id: string;
+  specialization: string | null;
+  qualification: string | null;
+  experience: number | null;
+  fee: number | null;
+  startTime: string | null;
+  queueMode: 'LIVE' | 'PRIVATE' | 'TIME_SLOT';
+  user: { id: string; name: string; email: string; phone: string | null; isActive: boolean };
+}
+
+export interface ClinicReceptionist {
+  id: string;
+  user: { id: string; name: string; email: string; phone: string | null; isActive: boolean };
+  assignedDoctors: { doctor: { user: { name: string } } }[];
+}
+
+export interface WorkingHour {
+  dayOfWeek: DayOfWeek;
+  isClosed: boolean;
+  openTime: string | null;
+  closeTime: string | null;
+}
+
+export interface ClinicHoliday {
+  id: string;
+  date: string;
+  reason: string | null;
+}
+
+export interface SentDoctorRequest {
+  id: string;
+  status: string;
+  dayOfWeek?: DayOfWeek;
+  startTime?: string;
+  endTime?: string;
+  fee?: number;
+  doctor?: { id?: string; user?: { name: string; email?: string } };
+  clinic?: { id?: string; clinicName?: string; city?: string; address?: string };
+}
+
+export interface DailyDashboardQueueItem {
+  doctorName: string;
+  doctorId?: string;
+  currentToken: number;
+  lastTokenIssued: number;
+  status: string;
+}
+
+export interface DailyDashboard {
+  clinicName: string;
+  date: string;
+  totalPatients: number;
+  totalAppointments: number;
+  newPatients: number;
+  returningPatients: number;
+  statusBreakdown: Record<string, number>;
+  doctorWise: Record<string, { totalAppointments: number; completed: number; waiting: number }>;
+  queueSummary: DailyDashboardQueueItem[];
+}
+
+export interface PeriodReport {
+  clinicName: string;
+  date?: string;
+  month?: string;
+  year?: string | number;
+  weekStart?: string;
+  weekEnd?: string;
+  startDate?: string;
+  endDate?: string;
+  totalAppointments: number;
+  byStatus: Record<string, number>;
+  bySource: Record<string, number>;
+  byDoctor: Record<string, { totalAppointments: number; completed: number; revenue: number }>;
+  estimatedRevenue: number;
+}
+
+export interface GrowthTrendPoint {
+  period: string;
+  newPatients: number;
+  returningPatients: number;
+  totalPatients: number;
+  totalAppointments: number;
+  doctorWise: Record<string, number>;
+}
+
+export interface GrowthReport {
+  clinicName: string;
+  granularity: string;
+  startDate: string;
+  endDate: string;
+  trend: GrowthTrendPoint[];
+  summary: {
+    currentPeriodPatients: number;
+    previousPeriodPatients: number;
+    growthRatePercent: number;
+  };
 }
 

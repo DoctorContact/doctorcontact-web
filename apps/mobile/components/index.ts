@@ -18,3 +18,7 @@ export * from './DoctorCurrentPatientCard';
 export * from './DoctorQueueActions';
 export * from './DoctorQueueList';
 export * from './DoctorPatientCard';
+export * from './ClinicDoctorCard';
+export * from './ClinicQueueCard';
+export * from './AddDoctorModal';
+export * from './EditDoctorModal';
