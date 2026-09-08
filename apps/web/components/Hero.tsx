@@ -74,7 +74,7 @@ export default function Hero() {
       <div className="relative mx-auto max-w-7xl px-5 lg:px-8">
         <div className="grid items-center gap-8 lg:grid-cols-12">
           {/* ================= LEFT: Copy + Search Bar ================= */}
-          <div className="lg:col-span-7">
+          <div className="lg:col-span-7 lg:py-2">
             <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#1C63E7] dark:text-[var(--color-primary-text)]">
               {t("eyebrow") || "TRUSTED HEALTHCARE FOR A BRIGHTER TOMORROW"}
             </p>
@@ -164,7 +164,7 @@ export default function Hero() {
           </div>
 
           {/* ================= RIGHT: Doctor Cutout + Badge (Image 1 style) ================= */}
-          <div className="relative lg:col-span-5 flex justify-center items-center">
+          <div className="relative lg:col-span-5 flex justify-center items-center self-stretch">
             {/* Script Text on top right of doctor */}
             <div className="absolute right-2 top-2 z-20 hidden sm:block text-right select-none">
               <p className="font-serif italic font-extrabold text-[#1C63E7] text-2xl lg:text-[1.75rem] leading-[1.15] drop-shadow-sm">
@@ -175,9 +175,9 @@ export default function Hero() {
               </p>
             </div>
 
-            {/* Doctor Image Container */}
-            <div className="relative z-10 mx-auto w-full max-w-[340px] sm:max-w-[380px] lg:max-w-[420px]">
-              <div className="relative aspect-[3/4] w-full overflow-hidden rounded-3xl">
+            {/* Doctor Image Container — bounded height so it never outgrows the copy */}
+            <div className="relative z-10 mx-auto w-full max-w-[320px] sm:max-w-[350px] lg:max-w-[370px]">
+              <div className="relative h-[360px] w-full overflow-hidden rounded-3xl sm:h-[420px] lg:h-[460px]">
                 <img
                   src="/assets/home/hero-doctor.jpg"
                   alt="Doctor"
