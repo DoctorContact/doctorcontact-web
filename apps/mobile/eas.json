@@ -18,8 +18,8 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.dewasigroup.com/api/v1",
-        "EXPO_PUBLIC_SOCKET_URL": "https://api.dewasigroup.com"
+        "EXPO_PUBLIC_API_URL": "https://api.doctorcontact.in/api/v1",
+        "EXPO_PUBLIC_SOCKET_URL": "https://api.doctorcontact.in"
       }
     },
     "production": {
@@ -28,8 +28,8 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.dewasigroup.com/api/v1",
-        "EXPO_PUBLIC_SOCKET_URL": "https://api.dewasigroup.com"
+        "EXPO_PUBLIC_API_URL": "https://api.doctorcontact.in/api/v1",
+        "EXPO_PUBLIC_SOCKET_URL": "https://api.doctorcontact.in"
       }
     }
   },

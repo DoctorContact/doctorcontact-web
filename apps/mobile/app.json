@@ -2,6 +2,7 @@
   "expo": {
     "name": "Dewasi Group",
     "slug": "dewasi-group",
+    "owner": "toprider123",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -38,6 +39,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "cdd70042-47e0-4110-b98e-2210dbffb516"
+      }
     }
   }
 }
