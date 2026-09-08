@@ -37,7 +37,12 @@ if (config.transformer && Array.isArray(config.transformer.assetPlugins)) {
   });
 }
 
-// 4. Prevent hierarchical lookup from picking up root React Native mismatches
-config.resolver.disableHierarchicalLookup = true;
+// 4. Force a single copy of react / react-native from the mobile workspace so the
+//    root (Next.js) copy of react is never pulled in, while still allowing normal
+//    hierarchical node_modules resolution for nested transitive deps.
+config.resolver.extraNodeModules = {
+  react: path.resolve(projectRoot, 'node_modules/react'),
+  'react-native': path.resolve(projectRoot, 'node_modules/react-native'),
+};
 
 module.exports = config;
