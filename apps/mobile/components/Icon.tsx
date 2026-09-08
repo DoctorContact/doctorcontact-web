@@ -1,4 +1,5 @@
 import React from 'react';
+import type { ColorValue } from 'react-native';
 import {
   Feather,
   MaterialCommunityIcons,
@@ -62,26 +63,14 @@ export type IconName =
 interface IconProps {
   name: IconName;
   size?: number;
-  color?: string;
+  color?: ColorValue;
 }
 
-const FeatherIcon = Feather as unknown as React.ComponentType<{
-  name: string;
-  size?: number;
-  color?: string;
-}>;
+type RawIconProps = { name: string; size?: number; color?: ColorValue };
 
-const MaterialCommunityIcon = MaterialCommunityIcons as unknown as React.ComponentType<{
-  name: string;
-  size?: number;
-  color?: string;
-}>;
-
-const Ionicon = Ionicons as unknown as React.ComponentType<{
-  name: string;
-  size?: number;
-  color?: string;
-}>;
+const FeatherIcon = Feather as unknown as React.ComponentType<RawIconProps>;
+const MaterialCommunityIcon = MaterialCommunityIcons as unknown as React.ComponentType<RawIconProps>;
+const Ionicon = Ionicons as unknown as React.ComponentType<RawIconProps>;
 
 export function Icon({ name, size = 20, color = '#111827' }: IconProps) {
   switch (name) {
