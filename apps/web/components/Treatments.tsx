@@ -42,7 +42,7 @@ const TREATMENTS = [
 
 export default function Treatments() {
   return (
-    <section id="treatments" className="mx-auto max-w-7xl px-5 py-3.5 sm:py-4.5 lg:px-8">
+    <section id="treatments" className="mx-auto max-w-7xl border-b border-slate-100 px-5 py-6 lg:px-8 dark:border-soft-200">
       <SectionHeader
         title="Treatments"
         subtitle="Choose the right approach for your health"

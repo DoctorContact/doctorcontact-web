@@ -17,7 +17,7 @@ const AMB_POINTS = [
 
 export default function LabsAmbulance() {
   return (
-    <section id="labs" className="mx-auto max-w-7xl px-5 py-3.5 sm:py-4.5 lg:px-8">
+    <section id="labs" className="mx-auto max-w-7xl px-5 py-6 lg:px-8">
       <div className="grid gap-5 lg:grid-cols-2">
         {/* ================= LABS CARD ================= */}
         <div className="relative flex flex-col justify-between overflow-hidden rounded-2xl border border-[#E9D5FF] bg-[#FAF5FF]/90 p-6 shadow-sm transition-all duration-300 hover:shadow-md dark:border-soft-300 dark:bg-surface sm:flex-row sm:items-center">

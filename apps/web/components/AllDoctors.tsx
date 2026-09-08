@@ -63,7 +63,7 @@ export default function AllDoctors() {
   if (!isLoading && doctors.length === 0) return null;
 
   return (
-    <section className="mx-auto max-w-7xl px-5 py-3.5 sm:py-4.5 lg:px-8">
+    <section className="mx-auto max-w-7xl border-b border-slate-100 px-5 py-6 lg:px-8 dark:border-soft-200">
       <SectionHeader
         title={t("allDoctors") || "All Doctors"}
         subtitle="Browse doctors from various specialities"

@@ -104,7 +104,7 @@ export default function FeaturedClinics() {
 
   if (isLoading) {
     return (
-      <section className="mx-auto max-w-7xl px-5 py-3.5 sm:py-4.5 lg:px-8">
+      <section className="mx-auto max-w-7xl border-b border-slate-100 px-5 py-6 lg:px-8 dark:border-soft-200">
         <SectionHeader title={t("featuredClinics") || "Featured Clinics"} subtitle="Top rated and most trusted clinics near you" />
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {[1, 2, 3, 4].map((i) => (
@@ -118,7 +118,7 @@ export default function FeaturedClinics() {
   if (featured.length === 0) return null;
 
   return (
-    <section className="mx-auto max-w-7xl px-5 py-3.5 sm:py-4.5 lg:px-8">
+    <section className="mx-auto max-w-7xl border-b border-slate-100 px-5 py-6 lg:px-8 dark:border-soft-200">
       <SectionHeader
         title={t("featuredClinics") || "Featured Clinics"}
         subtitle="Top rated and most trusted clinics near you"

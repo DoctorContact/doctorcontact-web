@@ -14,6 +14,7 @@ import {
   Info,
   Megaphone,
   Globe,
+  HeartPulse,
 } from "lucide-react";
 import Image from "next/image";
 import { useState, useRef, useEffect } from "react";
@@ -124,16 +125,19 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 border-b border-slate-100 bg-white/95 backdrop-blur-md shadow-[0_2px_10px_rgba(0,0,0,0.03)] transition-colors dark:border-soft-300 dark:bg-surface/95">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        {/* ================= DEWASI GROUP LOGO ================= */}
-        <Link href="/" className="flex items-center gap-2 shrink-0">
-          <Image
-            src="/main.png"
-            alt="Dewasi Group"
-            width={120}
-            height={42}
-            className="h-10 sm:h-11 w-auto object-contain"
-            priority
-          />
+        {/* ================= LOGO ================= */}
+        <Link href="/" className="flex items-center gap-2.5 shrink-0">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#1C63E7] text-white shadow-sm">
+            <HeartPulse className="h-5 w-5 text-white" />
+          </div>
+          <div className="flex flex-col">
+            <span className="text-base font-extrabold tracking-tight text-[#0F1B33] dark:text-ink-900 leading-none">
+              Doctor<span className="text-[#1C63E7]">Contact</span>
+            </span>
+            <span className="mt-0.5 text-[9px] font-medium text-slate-400 leading-none">
+              Healthier People, Happier Lives
+            </span>
+          </div>
         </Link>
 
         {/* ================= CENTER NAV (Treatments, Labs, Ambulance visible directly) ================= */}

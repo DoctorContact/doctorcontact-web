@@ -5,7 +5,7 @@ import { Link } from "@/i18n/routing";
 
 export default function HomeQuickLinks() {
   return (
-    <section className="mx-auto max-w-7xl px-5 py-2.5 sm:py-3.5 lg:px-8">
+    <section className="mx-auto max-w-7xl border-b border-slate-100 px-5 py-6 lg:px-8 dark:border-soft-200">
       <div className="grid gap-5 md:grid-cols-2">
         {/* Doctors Card */}
         <Link
