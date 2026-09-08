@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { 
@@ -28,7 +28,7 @@ function GradientCard({
   );
 }
 
-export default function DoctorsPage() {
+function DoctorsContent() {
   const t = useTranslations("DoctorSearch");
   const { city, status, setManualCity } = useLocationCity();
   const searchParams = useSearchParams();
@@ -267,5 +267,13 @@ export default function DoctorsPage() {
         />
       </div>
     </main>
+  );
+}
+
+export default function DoctorsPage() {
+  return (
+    <Suspense fallback={<div className="flex h-[50vh] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-[#14B8A6]" /></div>}>
+      <DoctorsContent />
+    </Suspense>
   );
 }
