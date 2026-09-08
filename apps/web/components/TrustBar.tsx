@@ -18,7 +18,7 @@ const ITEMS = [
 
 export default function TrustBar() {
   return (
-    <section className="border-t border-slate-200/80 bg-white py-6 dark:border-soft-300 dark:bg-surface">
+    <section className="border-t border-slate-200/80 bg-white py-3 sm:py-4 dark:border-soft-300 dark:bg-surface">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-5 lg:px-8">
         {ITEMS.map(({ icon: Icon, label }) => (
           <div

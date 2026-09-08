@@ -10,7 +10,6 @@ import QueryProvider from "@/components/QueryProvider";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import GlobalAnnouncement from "@/components/GlobalAnnouncement";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -54,9 +53,6 @@ export default async function RootLayout({
                 
                 
                 <Header />
-
-                {/* Global Announcement Banner injected here */}
-                <GlobalAnnouncement />
                 <div className="flex-1">{children}</div>
                 <Footer />
                 

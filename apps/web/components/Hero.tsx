@@ -65,7 +65,7 @@ export default function Hero() {
   return (
     <section
       id="search"
-      className="relative overflow-hidden bg-gradient-to-b from-[#EBF3FF] via-[#F4F8FE] to-white dark:from-[#0C1526] dark:via-[#0C1526] dark:to-[var(--color-bg)] pt-8 pb-12 lg:pt-12 lg:pb-16"
+      className="relative overflow-hidden bg-gradient-to-b from-[#EBF3FF] via-[#F4F8FE] to-white dark:from-[#0C1526] dark:via-[#0C1526] dark:to-[var(--color-bg)] pt-4 pb-6 lg:pt-6 lg:pb-8"
     >
       {/* Soft ambient background glow */}
       <div className="pointer-events-none absolute -left-20 -top-20 h-96 w-96 rounded-full bg-[#1C63E7]/10 blur-3xl" />

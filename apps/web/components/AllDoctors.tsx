@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useMemo, useState, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { Star, ChevronLeft, ChevronRight } from "lucide-react";
 import { Link } from "@/i18n/routing";
@@ -8,101 +8,62 @@ import { usePublicAllDoctors } from "@/lib/hooks/usePublicDirectory";
 import SectionHeader from "@/components/SectionHeader";
 import { ExtendedDoctor } from "@/types/doctor";
 
-const SPECIALTIES = [
-  "All",
-  "General Physician",
-  "Cardiologist",
-  "Dermatologist",
-  "Pediatrician",
-  "Gynecologist",
-  "Orthopedic",
-  "ENT",
-];
+function initials(name?: string) {
+  if (!name) return "DR";
+  return name
+    .replace(/^dr\.?\s*/i, "")
+    .split(" ")
+    .filter(Boolean)
+    .map((p) => p[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+}
 
-const FALLBACK_DOCTORS = [
-  {
-    id: "all-1",
-    name: "Dr. Rahul Mehta",
-    specialization: "General Physician",
-    rating: 4.8,
-    avatar: "/assets/home/doc1.jpg",
-  },
-  {
-    id: "all-2",
-    name: "Dr. Neha Kapoor",
-    specialization: "Dermatologist",
-    rating: 4.6,
-    avatar: "/assets/home/doc2.jpg",
-  },
-  {
-    id: "all-3",
-    name: "Dr. Ayan Ghosh",
-    specialization: "Orthopedic",
-    rating: 4.7,
-    avatar: "/assets/home/doc3.jpg",
-  },
-  {
-    id: "all-4",
-    name: "Dr. Ritu Singh",
-    specialization: "Gynecologist",
-    rating: 4.5,
-    avatar: "/assets/home/doc4.jpg",
-  },
-  {
-    id: "all-5",
-    name: "Dr. Karan Patel",
-    specialization: "ENT",
-    rating: 4.4,
-    avatar: "/assets/home/doc1.jpg",
-  },
-  {
-    id: "all-6",
-    name: "Dr. Ishita Roy",
-    specialization: "Pediatrician",
-    rating: 4.6,
-    avatar: "/assets/home/doc2.jpg",
-  },
-];
+function Avatar({ src, name }: { src?: string | null; name?: string }) {
+  const [broken, setBroken] = useState(false);
+  const showImg = src && !broken;
+  return (
+    <div className="h-16 w-16 overflow-hidden rounded-full border-2 border-slate-100 shadow-sm">
+      {showImg ? (
+        <img
+          src={src as string}
+          alt={name || "Doctor"}
+          onError={() => setBroken(true)}
+          className="h-full w-full object-cover object-top"
+        />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#1C63E7] to-[#3b82f6] text-base font-bold text-white">
+          {initials(name)}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function AllDoctors() {
   const t = useTranslations("HomePage");
-  const { data } = usePublicAllDoctors();
-  const rawDoctors = (data as ExtendedDoctor[]) ?? [];
-  const [activeSpecialty, setActiveSpecialty] = useState("All");
+  const { data, isLoading } = usePublicAllDoctors();
+  const doctors = ((data as ExtendedDoctor[]) ?? []).filter((d) => d?.id);
+  const [active, setActive] = useState("All");
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-
-  const scroll = (direction: "left" | "right") => {
-    if (scrollContainerRef.current) {
-      const scrollAmount = direction === "left" ? -280 : 280;
-      scrollContainerRef.current.scrollBy({ left: scrollAmount, behavior: "smooth" });
-    }
-  };
-
-  // Merge live doctors with fallbacks to guarantee high aesthetic fidelity
-  const displayDoctors =
-    rawDoctors.length > 0
-      ? rawDoctors.map((d, i) => ({
-          id: d.id,
-          name: d.user?.name || "Doctor",
-          specialization: d.specialization || "General Physician",
-          rating: d.rating || 4.7,
-          avatar:
-            (d as any).profilePhoto ||
-            d.user?.avatar ||
-            FALLBACK_DOCTORS[i % FALLBACK_DOCTORS.length].avatar,
-        }))
-      : FALLBACK_DOCTORS;
+  const specialties = useMemo(() => {
+    const set = new Set<string>();
+    doctors.forEach((d) => d.specialization && set.add(d.specialization));
+    return ["All", ...Array.from(set).slice(0, 10)];
+  }, [doctors]);
 
   const filtered =
-    activeSpecialty === "All"
-      ? displayDoctors
-      : displayDoctors.filter(
-          (d) => d.specialization.toLowerCase() === activeSpecialty.toLowerCase()
-        );
+    active === "All" ? doctors : doctors.filter((d) => d.specialization === active);
+
+  const scroll = (dir: "left" | "right") =>
+    scrollRef.current?.scrollBy({ left: dir === "left" ? -280 : 280, behavior: "smooth" });
+
+  if (!isLoading && doctors.length === 0) return null;
 
   return (
-    <section className="mx-auto max-w-7xl px-5 py-8 lg:px-8">
+    <section className="mx-auto max-w-7xl px-5 py-3.5 sm:py-4.5 lg:px-8">
       <SectionHeader
         title={t("allDoctors") || "All Doctors"}
         subtitle="Browse doctors from various specialities"
@@ -110,29 +71,25 @@ export default function AllDoctors() {
         viewAllLabel={t("viewAll") || "View All"}
       />
 
-      {/* Specialty Filter Pills */}
-      <div className="mb-6 flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
-        {SPECIALTIES.map((spec) => {
-          const isActive = activeSpecialty === spec;
-          return (
+      {specialties.length > 1 && (
+        <div className="mb-3.5 sm:mb-4 flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
+          {specialties.map((spec) => (
             <button
               key={spec}
-              onClick={() => setActiveSpecialty(spec)}
+              onClick={() => setActive(spec)}
               className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-semibold transition-all ${
-                isActive
+                active === spec
                   ? "bg-[#1C63E7] text-white shadow-sm"
                   : "border border-slate-200 bg-white text-slate-600 hover:border-[#1C63E7]/40 hover:text-[#1C63E7] dark:border-soft-300 dark:bg-surface dark:text-ink-600"
               }`}
             >
               {spec}
             </button>
-          );
-        })}
-      </div>
+          ))}
+        </div>
+      )}
 
-      {/* Carousel with Navigation Buttons */}
       <div className="relative group">
-        {/* Left Arrow */}
         <button
           onClick={() => scroll("left")}
           aria-label="Previous"
@@ -140,8 +97,6 @@ export default function AllDoctors() {
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
-
-        {/* Right Arrow */}
         <button
           onClick={() => scroll("right")}
           aria-label="Next"
@@ -150,40 +105,39 @@ export default function AllDoctors() {
           <ChevronRight className="h-4 w-4" />
         </button>
 
-        {/* Doctors Row */}
-        <div
-          ref={scrollContainerRef}
-          className="flex gap-4 overflow-x-auto px-1 py-2 no-scrollbar scroll-smooth"
-        >
-          {filtered.map((doctor) => (
-            <Link
-              key={doctor.id}
-              href={`/doctors/${doctor.id}`}
-              className="flex w-44 shrink-0 flex-col items-center rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[#1C63E7]/40 hover:shadow-md dark:border-soft-300 dark:bg-surface"
-            >
-              <div className="h-16 w-16 overflow-hidden rounded-full border-2 border-slate-100 shadow-sm">
-                <img
-                  src={doctor.avatar}
-                  alt={doctor.name}
-                  className="h-full w-full object-cover object-top"
-                />
-              </div>
-
-              <h4 className="mt-2.5 truncate max-w-full text-center text-xs font-bold text-[#0F1B33] dark:text-ink-900">
-                {doctor.name}
-              </h4>
-
-              <p className="mt-0.5 truncate max-w-full text-center text-[11px] font-medium text-slate-500 dark:text-ink-500">
-                {doctor.specialization}
-              </p>
-
-              <div className="mt-1 flex items-center gap-1 text-[11px]">
-                <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                <span className="font-bold text-slate-800 dark:text-ink-800">{doctor.rating}</span>
-              </div>
-            </Link>
-          ))}
-        </div>
+        {isLoading ? (
+          <div className="flex gap-4 px-1 py-2">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="h-[9.5rem] w-44 shrink-0 animate-pulse rounded-2xl bg-slate-100 dark:bg-surface" />
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
+          <p className="px-1 py-6 text-sm text-slate-500">No doctors in “{active}”.</p>
+        ) : (
+          <div ref={scrollRef} className="flex gap-4 overflow-x-auto px-1 py-2 no-scrollbar scroll-smooth">
+            {filtered.map((doctor) => (
+              <Link
+                key={doctor.id}
+                href={`/doctors/${doctor.id}`}
+                className="flex w-44 shrink-0 flex-col items-center rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-[#1C63E7]/40 hover:shadow-md dark:border-soft-300 dark:bg-surface"
+              >
+                <Avatar src={(doctor as any).profilePhoto || doctor.user?.avatar} name={doctor.user?.name} />
+                <h4 className="mt-2.5 truncate max-w-full text-center text-xs font-bold text-[#0F1B33] dark:text-ink-900">
+                  {doctor.user?.name || "Doctor"}
+                </h4>
+                <p className="mt-0.5 truncate max-w-full text-center text-[11px] font-medium text-slate-500 dark:text-ink-500">
+                  {doctor.specialization || "General Physician"}
+                </p>
+                {doctor.rating != null && (
+                  <div className="mt-1 flex items-center gap-1 text-[11px]">
+                    <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                    <span className="font-bold text-slate-800 dark:text-ink-800">{doctor.rating}</span>
+                  </div>
+                )}
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );

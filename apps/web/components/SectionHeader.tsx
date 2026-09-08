@@ -17,7 +17,7 @@ export default function SectionHeader({
   viewAllLabel?: string;
 }) {
   return (
-    <div className="mb-6 flex items-end justify-between gap-4">
+    <div className="mb-3.5 sm:mb-4 flex items-end justify-between gap-4">
       <div>
         {eyebrow && (
           <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.16em] text-[#1C63E7] dark:text-[var(--color-primary-text)]">
