@@ -20,18 +20,13 @@ import {
   MessageCircle,
   Loader2,
   Sparkles,
-  User,
-  Edit2,
 } from "lucide-react";
 import { loginSchema, type LoginInput, type AuthUser } from "@doctor-contract/shared";
 import { api, setAccessToken } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
-import { usePhoneAuth } from "@/lib/hooks/usePhoneAuth";
-import OtpInput from "@/components/auth/OtpInput";
 
 const CLINIC_PHONE = "+919777777777";
 const CLINIC_WHATSAPP = "919777777777";
-const RECAPTCHA_CONTAINER_ID = "login-recaptcha-container";
 
 function routeForRole(role: string) {
   switch (role) {
@@ -60,7 +55,6 @@ export default function LoginPage() {
   const t = useTranslations("AuthPage");
   const router = useRouter();
   const { setUser } = useAuth();
-  const [mode, setMode] = useState<"patient" | "staff">("patient");
 
   return (
     <main className="relative flex min-h-[calc(100vh-64px)] items-center justify-center bg-[var(--color-bg-soft)] px-4 py-8 sm:px-6 lg:px-8 dark:bg-[var(--color-bg)]">
@@ -212,37 +206,7 @@ export default function LoginPage() {
               <p className="text-sm text-gray-500 dark:text-ink-500">{t("loginSubtitle")}</p>
             </div>
 
-            {/* Patient / Staff tab toggle */}
-            <div className="mt-5 grid grid-cols-2 gap-1.5 rounded-xl border border-gray-100 bg-gray-50/80 p-1.5 dark:border-soft-200 dark:bg-surface-100">
-              <button
-                type="button"
-                onClick={() => setMode("patient")}
-                className={`rounded-lg py-2 text-xs font-semibold transition ${
-                  mode === "patient"
-                    ? "bg-white text-[var(--color-primary-text)] shadow-sm dark:bg-surface"
-                    : "text-gray-500 hover:text-gray-700 dark:text-ink-500"
-                }`}
-              >
-                {t("patientLoginTab")}
-              </button>
-              <button
-                type="button"
-                onClick={() => setMode("staff")}
-                className={`rounded-lg py-2 text-xs font-semibold transition ${
-                  mode === "staff"
-                    ? "bg-white text-[var(--color-primary-text)] shadow-sm dark:bg-surface"
-                    : "text-gray-500 hover:text-gray-700 dark:text-ink-500"
-                }`}
-              >
-                {t("staffLoginTab")}
-              </button>
-            </div>
-
-            {mode === "patient" ? (
-              <PatientPhoneLogin onSuccess={(user) => { setUser(user); router.push(routeForRole(user.role)); }} />
-            ) : (
-              <StaffPasswordLogin onSuccess={(user) => { setUser(user); router.push(routeForRole(user.role)); }} />
-            )}
+            <StaffPasswordLogin onSuccess={(user) => { setUser(user); router.push(routeForRole(user.role)); }} />
           </div>
 
           {/* Quick Clinic & Support Assistance Link */}
@@ -276,191 +240,10 @@ export default function LoginPage() {
 }
 
 // ==========================================================================
-// Patient tab — phone + Firebase OTP. Same backend call handles both login
-// (existing account) and signup (brand new number) — see /auth/patient/phone.
-// ==========================================================================
-type LoggedInUser = { role: string; [key: string]: unknown };
-
-function PatientPhoneLogin({ onSuccess }: { onSuccess: (user: AuthUser) => void }) {
-  const t = useTranslations("AuthPage");
-  const { step, phone, loading, error, sendOtp, confirmOtp, reset } = usePhoneAuth();
-  const [phoneInput, setPhoneInput] = useState("");
-  const [otp, setOtp] = useState("");
-  const [name, setName] = useState("");
-  const [needsName, setNeedsName] = useState(false);
-  const [serverError, setServerError] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-
-  async function handleSendOtp() {
-    setServerError("");
-    try {
-      await sendOtp(phoneInput, RECAPTCHA_CONTAINER_ID);
-    } catch {
-      /* error already captured by usePhoneAuth */
-    }
-  }
-
-  async function handleConfirmOtp() {
-    setServerError("");
-    setSubmitting(true);
-    try {
-      const idToken = await confirmOtp(otp);
-      const { data } = await api.post("/auth/patient/phone", {
-        idToken,
-        ...(needsName && { name }),
-      });
-      
-      setAccessToken(data.data.accessToken);
-
-      // 🟢 Update: Save Refresh Token & User to LocalStorage
-      if (typeof window !== "undefined") {
-        localStorage.setItem("refreshToken", data.data.refreshToken);
-        localStorage.setItem("user", JSON.stringify(data.data.user));
-      }
-
-      onSuccess(data.data.user);
-    } catch (err: unknown) {
-      if (typeof err === "object" && err !== null && "response" in err) {
-        const response = (err as { response?: { data?: { message?: string }; status?: number } }).response;
-        if (response?.status === 400 && response.data?.message?.toLowerCase().includes("name")) {
-          setNeedsName(true);
-        } else {
-          setServerError(response?.data?.message || t("genericError"));
-        }
-      } else {
-        setServerError(t("genericError"));
-      }
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  return (
-    <div className="mt-6 space-y-3.5">
-      <div id={RECAPTCHA_CONTAINER_ID} />
-
-      {step === "enter-phone" && (
-        <>
-          <div>
-            <label className="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-ink-700">
-              {t("phoneLabel")}
-            </label>
-            <div className="relative">
-              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-gray-400 dark:text-ink-400">
-                <Phone className="h-4 w-4" />
-              </div>
-              <input
-                value={phoneInput}
-                onChange={(e) => setPhoneInput(e.target.value)}
-                type="tel"
-                inputMode="tel"
-                placeholder={t("phonePlaceholder")}
-                className="w-full rounded-xl border border-gray-200 bg-gray-50/50 py-2.5 pr-4 pl-10 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-[var(--color-primary)] focus:bg-white focus:ring-4 focus:ring-[var(--color-primary)]/10 dark:border-soft-300 dark:bg-surface-100 dark:text-ink-900 dark:placeholder:text-ink-400 dark:focus:bg-surface"
-              />
-            </div>
-          </div>
-
-          {(error || serverError) && (
-            <div className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700 sm:text-sm dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300">
-              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-              <span>{error || serverError}</span>
-            </div>
-          )}
-
-          <button
-            type="button"
-            onClick={handleSendOtp}
-            disabled={loading || phoneInput.length < 10}
-            className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#1B3A8C] to-[#12295E] py-3 text-sm font-semibold text-white shadow-lg shadow-blue-900/20 transition-all hover:from-[#152e70] hover:to-[#0c1c42] hover:shadow-xl active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span>{t("sendingOtp")}</span>
-              </>
-            ) : (
-              <>
-                <span>{t("sendOtp")}</span>
-                <ArrowRight className="h-4 w-4" />
-              </>
-            )}
-          </button>
-        </>
-      )}
-
-      {step === "enter-otp" && (
-        <>
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-gray-600 dark:text-ink-600">
-              {t("otpSentTo")} <span className="font-semibold">{phone}</span>
-            </p>
-            <button
-              type="button"
-              onClick={reset}
-              className="flex items-center gap-1 text-xs font-medium text-[var(--color-primary-text)] hover:underline"
-            >
-              <Edit2 className="h-3 w-3" />
-              {t("editNumber")}
-            </button>
-          </div>
-
-          <OtpInput value={otp} onChange={setOtp} disabled={submitting} />
-
-          {needsName && (
-            <div>
-              <label className="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-ink-700">
-                {t("nameLabel")}
-              </label>
-              <div className="relative">
-                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-gray-400 dark:text-ink-400">
-                  <User className="h-4 w-4" />
-                </div>
-                <input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder={t("namePlaceholder")}
-                  className="w-full rounded-xl border border-gray-200 bg-gray-50/50 py-2.5 pr-4 pl-10 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-[var(--color-primary)] focus:bg-white focus:ring-4 focus:ring-[var(--color-primary)]/10 dark:border-soft-300 dark:bg-surface-100 dark:text-ink-900 dark:placeholder:text-ink-400 dark:focus:bg-surface"
-                />
-              </div>
-              <p className="mt-1.5 text-xs text-gray-400 dark:text-ink-400">{t("firstTimeNameHint")}</p>
-            </div>
-          )}
-
-          {(error || serverError) && (
-            <div className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700 sm:text-sm dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300">
-              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-              <span>{error || serverError}</span>
-            </div>
-          )}
-
-          <button
-            type="button"
-            onClick={handleConfirmOtp}
-            disabled={loading || submitting || otp.length < 6 || (needsName && name.trim().length < 2)}
-            className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#1B3A8C] to-[#12295E] py-3 text-sm font-semibold text-white shadow-lg shadow-blue-900/20 transition-all hover:from-[#152e70] hover:to-[#0c1c42] hover:shadow-xl active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {loading || submitting ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span>{t("verifying")}</span>
-              </>
-            ) : (
-              <>
-                <span>{t("verifyAndContinue")}</span>
-                <ArrowRight className="h-4 w-4" />
-              </>
-            )}
-          </button>
-        </>
-      )}
-    </div>
-  );
-}
-
-// ==========================================================================
-// Staff tab — email OR phone + password (Doctor/Clinic/Receptionist/Admin/
-// Super Admin). Detects whether the identifier looks like an email or a
-// phone number and sends the right field to /auth/login.
+// Email OR phone + password login (Doctor/Clinic/Receptionist/Admin/Super
+// Admin). Detects whether the identifier looks like an email or a phone
+// number and sends the right field to /auth/login. Patients no longer have
+// a login path here since Firebase phone-OTP was removed.
 // ==========================================================================
 function StaffPasswordLogin({ onSuccess }: { onSuccess: (user: AuthUser) => void }) {
   const t = useTranslations("AuthPage");

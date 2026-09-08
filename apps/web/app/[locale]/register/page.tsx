@@ -1,89 +1,26 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Link, useRouter } from "@/i18n/routing";
-import { useState } from "react";
+import { Link } from "@/i18n/routing";
 import Image from "next/image";
 import {
-  User,
   Phone,
   CalendarCheck,
   Clock,
   ShieldCheck,
   ArrowRight,
-  Loader2,
-  AlertCircle,
   MessageCircle,
   Sparkles,
-  Edit2,
 } from "lucide-react";
-import { api, setAccessToken } from "@/lib/api";
-import { useAuth } from "@/lib/auth-context";
-import { usePhoneAuth } from "@/lib/hooks/usePhoneAuth";
-import OtpInput from "@/components/auth/OtpInput";
 
 const CLINIC_PHONE = "+919777777777";
 const CLINIC_WHATSAPP = "919777777777";
-const RECAPTCHA_CONTAINER_ID = "register-recaptcha-container";
 
+// Patient self-registration used to run on Firebase phone-OTP. That has
+// been removed, so this page now points patients to the clinic instead of
+// showing a broken form. Wire up a new signup flow here when one exists.
 export default function RegisterPage() {
   const t = useTranslations("AuthPage");
-  const router = useRouter();
-  const { setUser } = useAuth();
-  const { step, phone, loading, error, sendOtp, confirmOtp, reset } = usePhoneAuth();
-
-  const [phoneInput, setPhoneInput] = useState("");
-  const [otp, setOtp] = useState("");
-  const [name, setName] = useState("");
-  const [needsName, setNeedsName] = useState(false);
-  const [serverError, setServerError] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-
-  async function handleSendOtp() {
-    setServerError("");
-    try {
-      await sendOtp(phoneInput, RECAPTCHA_CONTAINER_ID);
-    } catch {
-      // usePhoneAuth already captured the error message
-    }
-  }
-
-  async function finishAuth(idToken: string, withName?: string) {
-    setSubmitting(true);
-    setServerError("");
-    try {
-      const { data } = await api.post("/auth/patient/phone", {
-        idToken,
-        ...(withName && { name: withName }),
-      });
-      setAccessToken(data.data.accessToken);
-      setUser(data.data.user);
-      router.push("/patient");
-    } catch (err: unknown) {
-      if (typeof err === "object" && err !== null && "response" in err) {
-        const response = (err as { response?: { data?: { message?: string }; status?: number } }).response;
-        if (response?.status === 400 && response.data?.message?.toLowerCase().includes("name")) {
-          setNeedsName(true);
-        } else {
-          setServerError(response?.data?.message || t("genericError"));
-        }
-      } else {
-        setServerError(t("genericError"));
-      }
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  async function handleConfirmOtp() {
-    setServerError("");
-    try {
-      const idToken = await confirmOtp(otp);
-      await finishAuth(idToken, needsName ? name : undefined);
-    } catch {
-      // usePhoneAuth already captured the error message
-    }
-  }
 
   return (
     <main className="relative flex min-h-[calc(100vh-64px)] items-center justify-center bg-[var(--color-bg-soft)] px-4 py-8 sm:px-6 lg:px-8 dark:bg-[var(--color-bg)]">
@@ -235,124 +172,19 @@ export default function RegisterPage() {
               <p className="text-sm text-gray-500 dark:text-ink-500">{t("registerPhoneSubtitle")}</p>
             </div>
 
-            {/* Invisible reCAPTCHA anchor — required by Firebase, renders nothing visible */}
-            <div id={RECAPTCHA_CONTAINER_ID} />
-
             <div className="mt-6 space-y-3.5">
-              {step === "enter-phone" && (
-                <>
-                  <div>
-                    <label className="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-ink-700">
-                      {t("phoneLabel")}
-                    </label>
-                    <div className="relative">
-                      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-gray-400 dark:text-ink-400">
-                        <Phone className="h-4 w-4" />
-                      </div>
-                      <input
-                        value={phoneInput}
-                        onChange={(e) => setPhoneInput(e.target.value)}
-                        type="tel"
-                        inputMode="tel"
-                        placeholder={t("phonePlaceholder")}
-                        className="w-full rounded-xl border border-gray-200 bg-gray-50/50 py-2.5 pr-4 pl-10 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-[var(--color-primary)] focus:bg-white focus:ring-4 focus:ring-[var(--color-primary)]/10 dark:border-soft-300 dark:bg-surface-100 dark:text-ink-900 dark:placeholder:text-ink-400 dark:focus:bg-surface"
-                      />
-                    </div>
-                  </div>
+              <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50/70 p-4 text-sm text-gray-600 dark:border-soft-300 dark:bg-surface-100 dark:text-ink-600">
+                Online self-registration is temporarily unavailable. Please call or WhatsApp the clinic below and our team will set up your account.
+              </div>
 
-                  {(error || serverError) && (
-                    <div className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700 sm:text-sm dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300">
-                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-                      <span>{error || serverError}</span>
-                    </div>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={handleSendOtp}
-                    disabled={loading || phoneInput.length < 10}
-                    className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#1B3A8C] to-[#12295E] py-3 text-sm font-semibold text-white shadow-lg shadow-blue-900/20 transition-all hover:from-[#152e70] hover:to-[#0c1c42] hover:shadow-xl active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        <span>{t("sendingOtp")}</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>{t("sendOtp")}</span>
-                        <ArrowRight className="h-4 w-4" />
-                      </>
-                    )}
-                  </button>
-                </>
-              )}
-
-              {step === "enter-otp" && (
-                <>
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm text-gray-600 dark:text-ink-600">
-                      {t("otpSentTo")} <span className="font-semibold">{phone}</span>
-                    </p>
-                    <button
-                      type="button"
-                      onClick={reset}
-                      className="flex items-center gap-1 text-xs font-medium text-[var(--color-primary-text)] hover:underline"
-                    >
-                      <Edit2 className="h-3 w-3" />
-                      {t("editNumber")}
-                    </button>
-                  </div>
-
-                  <OtpInput value={otp} onChange={setOtp} disabled={submitting} />
-
-                  {needsName && (
-                    <div>
-                      <label className="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-ink-700">
-                        {t("nameLabel")}
-                      </label>
-                      <div className="relative">
-                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-gray-400 dark:text-ink-400">
-                          <User className="h-4 w-4" />
-                        </div>
-                        <input
-                          value={name}
-                          onChange={(e) => setName(e.target.value)}
-                          placeholder={t("namePlaceholder")}
-                          className="w-full rounded-xl border border-gray-200 bg-gray-50/50 py-2.5 pr-4 pl-10 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-[var(--color-primary)] focus:bg-white focus:ring-4 focus:ring-[var(--color-primary)]/10 dark:border-soft-300 dark:bg-surface-100 dark:text-ink-900 dark:placeholder:text-ink-400 dark:focus:bg-surface"
-                        />
-                      </div>
-                      <p className="mt-1.5 text-xs text-gray-400 dark:text-ink-400">{t("firstTimeNameHint")}</p>
-                    </div>
-                  )}
-
-                  {(error || serverError) && (
-                    <div className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700 sm:text-sm dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300">
-                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-                      <span>{error || serverError}</span>
-                    </div>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={handleConfirmOtp}
-                    disabled={loading || submitting || otp.length < 6 || (needsName && name.trim().length < 2)}
-                    className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#1B3A8C] to-[#12295E] py-3 text-sm font-semibold text-white shadow-lg shadow-blue-900/20 transition-all hover:from-[#152e70] hover:to-[#0c1c42] hover:shadow-xl active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {loading || submitting ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        <span>{t("verifying")}</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>{t("verifyAndContinue")}</span>
-                        <ArrowRight className="h-4 w-4" />
-                      </>
-                    )}
-                  </button>
-                </>
-              )}
+              <a
+                href={"tel:" + CLINIC_PHONE}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#1B3A8C] to-[#12295E] py-3 text-sm font-semibold text-white shadow-lg shadow-blue-900/20 transition-all hover:from-[#152e70] hover:to-[#0c1c42] hover:shadow-xl active:scale-[0.99]"
+              >
+                <Phone className="h-4 w-4" />
+                <span>Call to Register</span>
+                <ArrowRight className="h-4 w-4" />
+              </a>
 
               {/* Staff Login Link */}
               <div className="pt-2 text-center text-sm text-gray-500 dark:text-ink-500">

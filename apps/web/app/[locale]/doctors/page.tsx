@@ -28,7 +28,15 @@ function GradientCard({
   );
 }
 
-function DoctorsContent() {
+export default function DoctorsPage() {
+  return (
+    <Suspense fallback={null}>
+      <DoctorsPageContent />
+    </Suspense>
+  );
+}
+
+function DoctorsPageContent() {
   const t = useTranslations("DoctorSearch");
   const { city, status, setManualCity } = useLocationCity();
   const searchParams = useSearchParams();
@@ -267,13 +275,5 @@ function DoctorsContent() {
         />
       </div>
     </main>
-  );
-}
-
-export default function DoctorsPage() {
-  return (
-    <Suspense fallback={<div className="flex h-[50vh] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-[#14B8A6]" /></div>}>
-      <DoctorsContent />
-    </Suspense>
   );
 }
