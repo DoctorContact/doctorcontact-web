@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { 
@@ -39,9 +39,21 @@ export default function DoctorsPage() {
                    : "ALL";
 
   const [activeTab, setActiveTab] = useState<"ALL" | "AVAILABLE" | "LIVE">(initialTab);
-  const [query, setQuery] = useState(""); 
+  const [query, setQuery] = useState(
+    searchParams.get("q") ??
+      searchParams.get("specialty") ??
+      searchParams.get("treatment") ??
+      "",
+  );
   const [editingLocation, setEditingLocation] = useState(false);
   const [manualInput, setManualInput] = useState("");
+
+  // Seed the city filter from a ?city= param (e.g. coming from the home hero search)
+  const cityParam = searchParams.get("city");
+  useEffect(() => {
+    if (cityParam && cityParam.trim()) setManualCity(cityParam.trim());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cityParam]);
 
   function applyManualLocation(e: React.FormEvent) {
     e.preventDefault();

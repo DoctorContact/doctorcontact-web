@@ -3,8 +3,7 @@
 import { Search, MapPin, ChevronDown, Mic, Users } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 import { useState, useEffect } from "react";
-import Image from "next/image";
-import DoctorGrid from "./DoctorGrid";
+import { useRouter } from "@/i18n/routing";
 import { fetchSearchLocations } from "@/lib/api";
 
 interface Location {
@@ -20,13 +19,12 @@ const POPULAR_SEARCHES = ["Cardiologist", "Skin clinic", "Diabetes treatment", "
 export default function Hero() {
   const t = useTranslations("Hero");
   const locale = useLocale();
+  const router = useRouter();
 
   const [query, setQuery] = useState("");
-  const [appliedQuery, setAppliedQuery] = useState("");
 
   const [locations, setLocations] = useState<Location[]>([]);
   const [selectedLocation, setSelectedLocation] = useState("");
-  const [appliedLocation, setAppliedLocation] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -50,11 +48,11 @@ export default function Hero() {
   };
 
   function runSearch(q: string, loc: string) {
-    setAppliedQuery(q);
-    setAppliedLocation(loc);
-    if (typeof document !== "undefined") {
-      document.getElementById("search-results")?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
+    const params = new URLSearchParams();
+    if (q.trim()) params.set("q", q.trim());
+    if (loc.trim()) params.set("city", loc.trim());
+    const qs = params.toString();
+    router.push(qs ? `/doctors?${qs}` : "/doctors");
   }
 
   function handleSearch(e: React.FormEvent) {
@@ -203,12 +201,6 @@ export default function Hero() {
         </div>
       </div>
 
-      {/* ================= SEARCH RESULTS (if searched) ================= */}
-      {(appliedQuery || appliedLocation) && (
-        <div id="search-results" className="relative mx-auto max-w-7xl scroll-mt-24 px-5 pt-10 lg:px-8">
-          <DoctorGrid query={appliedQuery} city={appliedLocation} />
-        </div>
-      )}
     </section>
   );
 }
