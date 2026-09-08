@@ -30,7 +30,14 @@
     "statClinics": "Partner Clinics",
     "statQueue": "Queue Tracking",
     "statQueueValue": "Live",
-    "searchUnifiedPlaceholder": "Search by name or location..."
+    "searchUnifiedPlaceholder": "Search doctors, clinics, treatments...",
+    "eyebrow": "Trusted healthcare for a brighter tomorrow",
+    "headlineA": "Your Health",
+    "headlineB": "Our Priority",
+    "heroSubtitle": "Find trusted doctors, nearby clinics, book appointments and access healthcare services — all in one place.",
+    "popularLabel": "Popular searches",
+    "trustedBy": "Happy Patients trust us",
+    "trustedCount": "10,000+"
   },
   "Specialties": {
     "title": "Search by Specialty",
@@ -231,7 +238,8 @@
     "referrals": "Referrals",
     "reports": "Reports",
     "settings": "Settings",
-    "addPatient": "Queue / Add Patient"
+    "addPatient": "Queue / Add Patient",
+    "followUps": "Follow-ups"
   },
   "ClinicDashboard": {
     "title": "Operational Dashboard",

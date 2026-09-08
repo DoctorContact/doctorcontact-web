@@ -7,9 +7,14 @@ import {
   LayoutDashboard,
   User,
   ChevronDown,
+  MapPin,
+  HeartPulse,
+  Radio,
+  Building2,
+  Stethoscope,
+  Info,
 } from "lucide-react";
-import Image from "next/image";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useTranslations } from "next-intl";
 
 import { useAuth } from "@/lib/auth-context";
@@ -17,7 +22,6 @@ import { Link, useRouter } from "@/i18n/routing";
 
 import LanguageSwitcher from "./LanguageSwitcher";
 import NotificationBell from "./NotificationBell";
-import LiveDoctorsButton from "./LiveDoctorsButton";
 
 export default function Header() {
   const t = useTranslations("HomePage");
@@ -29,8 +33,30 @@ export default function Header() {
 
   const [open, setOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState("Dubrajpur");
+  const [showLocationMenu, setShowLocationMenu] = useState(false);
 
-    // Clinics land on /clinic, Doctors on /doctor/dashboard, Diagnostic Centers on /diagnosticCenter/dashboard, Staff on /diagnosticCenter/referrals, Admins on /admin/dashboard, Receptionists on /receptionist/dashboard, Patients on /patient.
+  const moreRef = useRef<HTMLDivElement>(null);
+  const userRef = useRef<HTMLDivElement>(null);
+  const locRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (moreRef.current && !moreRef.current.contains(e.target as Node)) {
+        setShowMoreMenu(false);
+      }
+      if (userRef.current && !userRef.current.contains(e.target as Node)) {
+        setShowUserMenu(false);
+      }
+      if (locRef.current && !locRef.current.contains(e.target as Node)) {
+        setShowLocationMenu(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const isClinic = user?.role === "CLINIC";
   const isDoctor = user?.role === "DOCTOR";
   const isDiagnosticCenter = user?.role === "DIAGNOSTIC_CENTER";
@@ -38,6 +64,7 @@ export default function Header() {
   const isSuperAdmin = user?.role === "SUPER_ADMIN";
   const isAdmin = user?.role === "ADMIN";
   const isReceptionist = user?.role === "RECEPTIONIST";
+
   const dashboardHref = isClinic
     ? "/clinic"
     : isDoctor
@@ -45,7 +72,7 @@ export default function Header() {
       : isDiagnosticCenter
         ? "/diagnosticCenter/dashboard"
         : isDiagnosticStaff
-          ? "/diagnosticCenter/referrals"
+          ? "/diagnosticStaff/dashboard"
           : isSuperAdmin
             ? "/super_admin/dashboard"
             : isAdmin
@@ -53,6 +80,7 @@ export default function Header() {
               : isReceptionist
                 ? "/receptionist/dashboard"
                 : "/patient";
+
   const dashboardLabel = isClinic
     ? dash("clinicPanel")
     : isDoctor
@@ -60,7 +88,7 @@ export default function Header() {
       : isDiagnosticCenter
         ? "Diagnostic Portal"
         : isDiagnosticStaff
-          ? "Referrals Inbox"
+          ? "Diagnostic Staff"
           : isSuperAdmin
             ? "Super Admin"
             : isAdmin
@@ -76,169 +104,267 @@ export default function Header() {
     router.push("/login");
   }
 
+  const LOCATIONS = ["Dubrajpur", "Suri", "Bolpur", "Rampurhat", "Kolkata"];
+
   return (
-    <header className="sticky top-0 z-50 border-b border-gray-200 bg-white shadow-sm transition-colors dark:border-soft-300 dark:bg-surface">
+    <header className="sticky top-0 z-50 border-b border-slate-100 bg-white shadow-[0_2px_10px_rgba(0,0,0,0.03)] transition-colors dark:border-soft-300 dark:bg-surface">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* ================= LOGO ================= */}
         <Link href="/" className="flex items-center gap-2.5">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-500/10">
-            <Image
-              src="/logo-icon.png"
-              alt="Doctor Contact"
-              width={36}
-              height={36}
-              className="h-9 w-9 object-contain"
-              priority
-            />
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm">
+            <HeartPulse className="h-6 w-6 text-white" />
           </div>
 
-          <Image
-            src="/LOGO.png"
-            alt="Doctor Contact"
-            width={130}
-            height={36}
-            className="h-8 sm:h-9 w-auto object-contain"
-            priority
-          />
+          <div className="flex flex-col">
+            <span className="text-lg font-extrabold tracking-tight text-[#0F1B33] dark:text-ink-900 leading-none">
+              Doctor<span className="text-[#1C63E7]">Contact</span>
+            </span>
+            <span className="mt-1 text-[10px] font-medium text-slate-400 leading-none">
+              Healthier People, Happier Lives
+            </span>
+          </div>
         </Link>
 
-        {/* ================= DESKTOP NAV ================= */}
+        {/* ================= CENTER NAV LINKS (Image 1 style) ================= */}
+        <nav className="hidden items-center gap-6 lg:flex">
+          <Link
+            href="/"
+            className="text-sm font-semibold text-[#1C63E7] hover:text-[#1550c4] transition-colors relative py-1 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-[#1C63E7] after:rounded-full"
+          >
+            Home
+          </Link>
+
+          <Link
+            href="/doctors"
+            className="text-sm font-medium text-slate-700 hover:text-[#1C63E7] transition-colors dark:text-ink-700 dark:hover:text-[var(--color-primary-text)]"
+          >
+            Doctors
+          </Link>
+
+          <Link
+            href="/clinics"
+            className="text-sm font-medium text-slate-700 hover:text-[#1C63E7] transition-colors dark:text-ink-700 dark:hover:text-[var(--color-primary-text)]"
+          >
+            Clinics
+          </Link>
+
+          <Link
+            href="/#treatments"
+            className="text-sm font-medium text-slate-700 hover:text-[#1C63E7] transition-colors dark:text-ink-700 dark:hover:text-[var(--color-primary-text)]"
+          >
+            Treatments
+          </Link>
+
+          <Link
+            href="/#labs"
+            className="text-sm font-medium text-slate-700 hover:text-[#1C63E7] transition-colors dark:text-ink-700 dark:hover:text-[var(--color-primary-text)]"
+          >
+            Labs
+          </Link>
+
+          <Link
+            href="/#ambulance"
+            className="text-sm font-medium text-slate-700 hover:text-[#1C63E7] transition-colors dark:text-ink-700 dark:hover:text-[var(--color-primary-text)]"
+          >
+            Ambulance
+          </Link>
+
+          {/* More Dropdown */}
+          <div className="relative" ref={moreRef}>
+            <button
+              onClick={() => setShowMoreMenu(!showMoreMenu)}
+              className="flex items-center gap-1 text-sm font-medium text-slate-700 hover:text-[#1C63E7] transition-colors dark:text-ink-700"
+            >
+              More
+              <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+            </button>
+
+            {showMoreMenu && (
+              <div className="absolute left-0 mt-2 w-48 rounded-xl border border-slate-100 bg-white p-1.5 shadow-lg dark:border-soft-300 dark:bg-surface animate-in fade-in zoom-in-95 duration-100">
+                <Link
+                  href="/doctors/available"
+                  onClick={() => setShowMoreMenu(false)}
+                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:text-ink-700 dark:hover:bg-soft-50"
+                >
+                  <Stethoscope className="h-4 w-4 text-[#1C63E7]" />
+                  Available Doctors
+                </Link>
+                <Link
+                  href="/clinics/available"
+                  onClick={() => setShowMoreMenu(false)}
+                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:text-ink-700 dark:hover:bg-soft-50"
+                >
+                  <Building2 className="h-4 w-4 text-[#16A34A]" />
+                  Available Clinics
+                </Link>
+                <Link
+                  href="/#clinics"
+                  onClick={() => setShowMoreMenu(false)}
+                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:text-ink-700 dark:hover:bg-soft-50"
+                >
+                  <Info className="h-4 w-4 text-amber-500" />
+                  Apply for Listing
+                </Link>
+              </div>
+            )}
+          </div>
+        </nav>
+
+        {/* ================= RIGHT CONTROLS ================= */}
         <div className="hidden items-center gap-3 md:flex">
-          {/* Available Doctors */}
+          {/* Live Doctors Pink/Red Pill Button (Image 1 style) */}
           <Link
             href="/doctors/available"
-            className="rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
+            className="flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[#e11d48] to-[#db2777] px-3.5 py-1.5 text-xs font-bold text-white shadow-sm transition hover:opacity-95"
           >
-            {nav("availableDoctors")}
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
+            </span>
+            <Radio className="h-3.5 w-3.5 text-white" />
+            <span>Live</span>
           </Link>
 
-          {/* Available Clinics */}
-          <Link
-            href="/clinics/available"
-            className="rounded-full border border-[var(--color-primary)]/25 px-4 py-2 text-sm font-semibold text-[var(--color-primary-text)] transition hover:bg-[var(--color-primary)]/5"
-          >
-            {nav("availableClinics")}
-          </Link>
+          {/* Location Selector Pill (Image 1 style) */}
+          <div className="relative" ref={locRef}>
+            <button
+              onClick={() => setShowLocationMenu(!showLocationMenu)}
+              className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50/80 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-soft-300 dark:bg-surface dark:text-ink-700"
+            >
+              <MapPin className="h-3.5 w-3.5 text-[#1C63E7]" />
+              <span>{selectedLocation}</span>
+              <ChevronDown className="h-3 w-3 text-slate-400" />
+            </button>
 
-          {/* Apply for Listing */}
-          <Link
-            href="/#clinics"
-            className="rounded-full border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 dark:border-soft-300 dark:text-ink-700 dark:hover:bg-soft-50"
-          >
-            {nav("applyForListing")}
-          </Link>
+            {showLocationMenu && (
+              <div className="absolute right-0 mt-2 w-36 rounded-xl border border-slate-100 bg-white p-1 shadow-lg dark:border-soft-300 dark:bg-surface">
+                {LOCATIONS.map((loc) => (
+                  <button
+                    key={loc}
+                    onClick={() => {
+                      setSelectedLocation(loc);
+                      setShowLocationMenu(false);
+                    }}
+                    className={`flex w-full items-center px-3 py-1.5 text-xs rounded-lg transition text-left ${
+                      selectedLocation === loc
+                        ? "bg-blue-50 font-bold text-[#1C63E7]"
+                        : "text-slate-600 hover:bg-slate-50"
+                    }`}
+                  >
+                    {loc}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
-          {/* Divider */}
-          <span className="mx-1 h-6 w-px bg-gray-200" />
-
-          {/* Language */}
-          <LanguageSwitcher />
-
-          {/* Live Doctors (was Dark Mode toggle) */}
-          <LiveDoctorsButton compact />
-
-          {/* Notification Bell - Desktop */}
+          {/* Notification Bell */}
           {user && <NotificationBell />}
 
-          {/* ================= USER ================= */}
-          {user ? (
-            <div className="relative">
-              <button
-                onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex items-center gap-2 rounded-full px-3 py-1.5 transition hover:bg-gray-50 dark:hover:bg-soft-50"
-              >
-                {/* Avatar */}
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300">
-                  <span className="text-sm font-bold">
-                    {user.name?.charAt(0).toUpperCase() || "U"}
-                  </span>
-                </div>
+          {/* Language Switcher */}
+          <LanguageSwitcher />
 
-                {/* Name */}
-                <span className="hidden text-sm font-medium text-gray-700 lg:block dark:text-ink-700">
-                  {user.name}
+          {/* ================= USER PROFILE (Image 1 circular dark button) ================= */}
+          <div className="relative" ref={userRef}>
+            <button
+              onClick={() => setShowUserMenu(!showUserMenu)}
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-[#0F1B33] text-white shadow transition hover:bg-[#1e293b]"
+              aria-label="User menu"
+            >
+              {user ? (
+                <span className="text-xs font-bold">
+                  {user.name?.charAt(0).toUpperCase() || "U"}
                 </span>
-
-                <ChevronDown className="h-4 w-4 text-gray-400" />
-              </button>
-
-              {/* ================= USER DROPDOWN ================= */}
-              {showUserMenu && (
-                <div className="absolute right-0 mt-2 w-48 rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-soft-300 dark:bg-surface">
-                  {/* Dashboard */}
-                  <Link
-                    href={dashboardHref}
-                    onClick={() => setShowUserMenu(false)}
-                    className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-ink-700 dark:hover:bg-soft-50"
-                  >
-                    <LayoutDashboard className="h-4 w-4" />
-                    {dashboardLabel}
-                  </Link>
-
-                  {/* Profile — patients only */}
-                  {!isClinic && !isDoctor && !isDiagnosticCenter && !isDiagnosticStaff && !isAdmin && (
-                    <Link
-                      href="/patient/profile"
-                      onClick={() => setShowUserMenu(false)}
-                      className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-ink-700 dark:hover:bg-soft-50"
-                    >
-                      <User className="h-4 w-4" />
-                      {dash("profile")}
-                    </Link>
-                  )}
-
-                  <hr className="my-1 border-gray-100 dark:border-soft-100" />
-
-                  {/* Logout */}
-                  <button
-                    onClick={handleLogout}
-                    className="flex w-full items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10"
-                  >
-                    <LogOut className="h-4 w-4" />
-                    {dash("logout")}
-                  </button>
-                </div>
+              ) : (
+                <User className="h-4 w-4" />
               )}
-            </div>
-          ) : (
-            /* ================= GUEST DESKTOP ================= */
-            <div className="flex items-center gap-2">
-              <Link
-                href="/login"
-                className="px-4 py-2 text-sm font-semibold text-blue-600 transition hover:text-blue-700"
-              >
-                {t("login")}
-              </Link>
+            </button>
 
-              <Link
-                href="/register"
-                className="rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
-              >
-                {t("register")}
-              </Link>
-            </div>
-          )}
+            {/* Dropdown Menu */}
+            {showUserMenu && (
+              <div className="absolute right-0 mt-2 w-52 rounded-xl border border-slate-100 bg-white py-1.5 shadow-xl dark:border-soft-300 dark:bg-surface">
+                {user ? (
+                  <>
+                    <div className="border-b border-slate-100 px-4 py-2.5 dark:border-soft-200">
+                      <p className="text-xs font-bold text-slate-900 dark:text-ink-900 truncate">
+                        {user.name}
+                      </p>
+                      <p className="text-[11px] text-slate-500 truncate">{user.email || user.role}</p>
+                    </div>
+
+                    <Link
+                      href={dashboardHref}
+                      onClick={() => setShowUserMenu(false)}
+                      className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:text-ink-700 dark:hover:bg-soft-50"
+                    >
+                      <LayoutDashboard className="h-4 w-4 text-[#1C63E7]" />
+                      {dashboardLabel}
+                    </Link>
+
+                    {!isClinic && !isDoctor && !isDiagnosticCenter && !isDiagnosticStaff && !isAdmin && (
+                      <Link
+                        href="/patient/profile"
+                        onClick={() => setShowUserMenu(false)}
+                        className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:text-ink-700 dark:hover:bg-soft-50"
+                      >
+                        <User className="h-4 w-4 text-slate-500" />
+                        {dash("profile")}
+                      </Link>
+                    )}
+
+                    <hr className="my-1 border-slate-100 dark:border-soft-100" />
+
+                    <button
+                      onClick={handleLogout}
+                      className="flex w-full items-center gap-2 px-4 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      {dash("logout")}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div className="p-2 space-y-1">
+                      <Link
+                        href="/login"
+                        onClick={() => setShowUserMenu(false)}
+                        className="block w-full rounded-lg bg-[#1C63E7] px-3 py-2 text-center text-xs font-bold text-white transition hover:bg-[#1550c4]"
+                      >
+                        {t("login")}
+                      </Link>
+                      <Link
+                        href="/register"
+                        onClick={() => setShowUserMenu(false)}
+                        className="block w-full rounded-lg border border-slate-200 px-3 py-2 text-center text-xs font-bold text-slate-700 transition hover:bg-slate-50"
+                      >
+                        {t("register")}
+                      </Link>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* ================= MOBILE HEADER ================= */}
         <div className="flex items-center gap-2 md:hidden">
-          {/* Live Doctors (was Dark Mode toggle) */}
-          <LiveDoctorsButton compact />
+          <Link
+            href="/doctors/available"
+            className="flex items-center gap-1 rounded-full bg-gradient-to-r from-[#e11d48] to-[#db2777] px-2.5 py-1 text-[11px] font-bold text-white shadow-sm"
+          >
+            <Radio className="h-3 w-3" />
+            <span>Live</span>
+          </Link>
 
-          {/* Notification Bell - Mobile */}
           {user && <NotificationBell />}
 
-          {/* Menu Button */}
           <button
             onClick={() => setOpen(!open)}
             className="rounded-lg p-2 text-gray-600 transition hover:bg-gray-100 dark:text-ink-600 dark:hover:bg-soft-100"
             aria-label={open ? "Close menu" : "Open menu"}
           >
-            {open ? (
-              <X className="h-5 w-5" />
-            ) : (
-              <Menu className="h-5 w-5" />
-            )}
+            {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
         </div>
       </div>
@@ -247,150 +373,89 @@ export default function Header() {
       {open && (
         <div className="border-t border-gray-200 bg-white md:hidden dark:border-soft-300 dark:bg-surface">
           <div className="space-y-2 px-4 py-4">
+            <Link
+              href="/"
+              onClick={() => setOpen(false)}
+              className="block rounded-lg px-3 py-2 text-sm font-semibold text-[#1C63E7] bg-blue-50"
+            >
+              Home
+            </Link>
+            <Link
+              href="/doctors"
+              onClick={() => setOpen(false)}
+              className="block rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              Doctors
+            </Link>
+            <Link
+              href="/clinics"
+              onClick={() => setOpen(false)}
+              className="block rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              Clinics
+            </Link>
+            <Link
+              href="/#treatments"
+              onClick={() => setOpen(false)}
+              className="block rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              Treatments
+            </Link>
+            <Link
+              href="/#labs"
+              onClick={() => setOpen(false)}
+              className="block rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              Labs
+            </Link>
+            <Link
+              href="/#ambulance"
+              onClick={() => setOpen(false)}
+              className="block rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              Ambulance
+            </Link>
+
+            <hr className="my-2 border-slate-100" />
+
             {user ? (
               <>
-                {/* ================= MOBILE USER INFO ================= */}
-                <div className="flex items-center gap-3 rounded-lg bg-gray-50 p-3 dark:bg-soft-50">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300">
-                    <span className="font-bold">
-                      {user.name?.charAt(0).toUpperCase() || "U"}
-                    </span>
-                  </div>
-
-                  <div>
-                    <p className="font-medium text-gray-800 dark:text-ink-800">{user.name}</p>
-                    <p className="text-xs text-gray-500">
-                      {isClinic
-                        ? "Clinic"
-                        : isDoctor
-                          ? "Doctor"
-                          : isDiagnosticCenter
-                            ? "Diagnostic Center"
-                            : isDiagnosticStaff
-                              ? "Diagnostic Staff"
-                              : isAdmin
-                                ? user.role === "SUPER_ADMIN"
-                                  ? "Super Admin"
-                                  : "Admin"
-                                : "Patient"}
-                    </p>
-                  </div>
-                </div>
-
-                {/* ================= AVAILABLE DOCTORS ================= */}
-                <Link
-                  href="/doctors/available"
-                  onClick={() => setOpen(false)}
-                  className="block rounded-lg bg-blue-600 px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-blue-700"
-                >
-                  {nav("availableDoctors")}
-                </Link>
-
-                {/* ================= AVAILABLE CLINICS ================= */}
-                <Link
-                  href="/clinics/available"
-                  onClick={() => setOpen(false)}
-                  className="block rounded-lg border border-[var(--color-primary)]/25 px-4 py-3 text-center text-sm font-semibold text-[var(--color-primary-text)] transition hover:bg-[var(--color-primary)]/5"
-                >
-                  {nav("availableClinics")}
-                </Link>
-
-                {/* ================= APPLY FOR LISTING ================= */}
-                <Link
-                  href="/#clinics"
-                  onClick={() => setOpen(false)}
-                  className="block rounded-lg border border-gray-300 px-4 py-3 text-center text-sm font-semibold text-gray-700 transition hover:bg-gray-50 dark:border-soft-300 dark:text-ink-700 dark:hover:bg-soft-50"
-                >
-                  {nav("applyForListing")}
-                </Link>
-
-                {/* ================= DASHBOARD ================= */}
                 <Link
                   href={dashboardHref}
                   onClick={() => setOpen(false)}
-                  className="block rounded-lg px-4 py-3 text-sm text-gray-700 transition hover:bg-gray-50 dark:text-ink-700 dark:hover:bg-soft-50"
+                  className="block rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                 >
                   <LayoutDashboard className="mr-2 inline h-4 w-4" />
                   {dashboardLabel}
                 </Link>
-
-                {/* ================= PROFILE (patients only) ================= */}
-                {!isClinic && !isDoctor && !isDiagnosticCenter && !isDiagnosticStaff && (
-                  <Link
-                    href="/dashboard/profile"
-                    onClick={() => setOpen(false)}
-                    className="block rounded-lg px-4 py-3 text-sm text-gray-700 transition hover:bg-gray-50 dark:text-ink-700 dark:hover:bg-soft-50"
-                  >
-                    <User className="mr-2 inline h-4 w-4" />
-                    {dash("profile")}
-                  </Link>
-                )}
-
-                <hr className="border-gray-100 dark:border-soft-100" />
-
-                {/* ================= LOGOUT ================= */}
                 <button
                   onClick={handleLogout}
-                  className="flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-medium text-red-600 transition hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10"
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50"
                 >
                   <LogOut className="h-4 w-4" />
                   {dash("logout")}
                 </button>
               </>
             ) : (
-              <>
-                {/* ================= GUEST MOBILE ================= */}
-
-                {/* Available Doctors */}
+              <div className="grid grid-cols-2 gap-2 pt-2">
                 <Link
-                  href="/doctors/available"
+                  href="/login"
                   onClick={() => setOpen(false)}
-                  className="block rounded-lg bg-blue-600 px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-blue-700"
+                  className="rounded-lg border border-slate-200 px-3 py-2 text-center text-xs font-bold text-slate-700"
                 >
-                  {nav("availableDoctors")}
+                  {t("login")}
                 </Link>
-
-                {/* Available Clinics */}
                 <Link
-                  href="/clinics"
+                  href="/register"
                   onClick={() => setOpen(false)}
-                  className="block rounded-lg border border-[var(--color-primary)]/25 px-4 py-3 text-center text-sm font-semibold text-[var(--color-primary-text)] transition hover:bg-[var(--color-primary)]/5"
+                  className="rounded-lg bg-[#1C63E7] px-3 py-2 text-center text-xs font-bold text-white"
                 >
-                  {nav("availableClinics")}
+                  {t("register")}
                 </Link>
-
-                {/* Apply for Listing */}
-                <Link
-                  href="/#clinics"
-                  onClick={() => setOpen(false)}
-                  className="block rounded-lg border border-gray-300 px-4 py-3 text-center text-sm font-semibold text-gray-700 transition hover:bg-gray-50 dark:border-soft-300 dark:text-ink-700 dark:hover:bg-soft-50"
-                >
-                  {nav("applyForListing")}
-                </Link>
-
-                {/* Login / Register */}
-                <div className="grid grid-cols-2 gap-3 pt-2">
-                  <Link
-                    href="/login"
-                    onClick={() => setOpen(false)}
-                    className="rounded-lg border border-gray-300 px-4 py-3 text-center text-sm font-semibold text-gray-700 transition hover:bg-gray-50 dark:border-soft-300 dark:text-ink-700 dark:hover:bg-soft-50"
-                  >
-                    {t("login")}
-                  </Link>
-
-                  <Link
-                    href="/register"
-                    onClick={() => setOpen(false)}
-                    className="rounded-lg bg-blue-600 px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-blue-700"
-                  >
-                    {t("register")}
-                  </Link>
-                </div>
-              </>
+              </div>
             )}
 
-            {/* ================= MOBILE LANGUAGE ================= */}
-            <div className="pt-3 text-center">
+            <div className="pt-2 text-center">
               <LanguageSwitcher />
             </div>
           </div>

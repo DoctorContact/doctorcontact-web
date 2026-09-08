@@ -59,12 +59,12 @@ export default function DiagnosticCenterLayout({
     if (!loading) {
       if (!user || !isAuthorized) {
         router.push("/login");
-      } else if (isStaff && !pathname.startsWith("/diagnosticCenter/referrals")) {
-        // Diagnostic staff have access ONLY to referrals inbox
-        router.push("/diagnosticCenter/referrals");
+      } else if (isStaff) {
+        // Diagnostic staff have their own dedicated portal.
+        router.push("/diagnosticStaff/dashboard");
       }
     }
-  }, [loading, user, isAuthorized, isStaff, pathname, router]);
+  }, [loading, user, isAuthorized, isStaff, router]);
 
   const visibleNav = useMemo(() => {
     if (isStaff) {

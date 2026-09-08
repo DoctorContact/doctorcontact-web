@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { usePathname, Link, useRouter } from "@/i18n/routing";
-import { LayoutDashboard, Stethoscope, Users, LogOut, Loader2, ClipboardList } from "lucide-react";
+import { LayoutDashboard, Stethoscope, Users, LogOut, Loader2, ClipboardList, FlaskConical } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import type { LucideIcon } from "lucide-react";
 
@@ -17,6 +17,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/receptionist/dashboard", label: "Doctors", icon: LayoutDashboard, exact: true },
   { href: "/receptionist/queue", label: "Queue", icon: ClipboardList },
   { href: "/receptionist/patients", label: "Patients", icon: Users },
+  { href: "/receptionist/test-recommendations", label: "Test Recs", icon: FlaskConical },
 ];
 
 function LoadingSpinner() {
@@ -120,7 +121,7 @@ export default function ReceptionistLayout({ children }: { children: React.React
         className="fixed inset-x-0 bottom-0 z-30 border-t border-gray-200 bg-white pb-[env(safe-area-inset-bottom)] shadow-[0_-2px_10px_rgba(0,0,0,0.04)] md:hidden dark:border-soft-300 dark:bg-surface"
         aria-label="Primary"
       >
-        <div className="grid grid-cols-3">
+        <div className="grid grid-cols-4">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
             const active = isActive(item);

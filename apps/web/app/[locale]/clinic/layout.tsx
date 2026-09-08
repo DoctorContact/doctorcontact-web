@@ -41,6 +41,7 @@ const NAV_ITEMS: NavItem[] = [
   // MANAGEMENT (Indices 4, 5, 6, 7, 8)
   { href: "/clinic/add-patient", key: "addPatient", icon: UserPlus }, // <-- Placed here
   { href: "/clinic/schedule", key: "schedule", icon: CalendarClock },
+  { href: "/clinic/follow-ups", key: "followUps", icon: CalendarClock },
   { href: "/clinic/requests", key: "requests", icon: Inbox },
   { href: "/clinic/referrals", key: "referrals", icon: FlaskConical },
   { href: "/clinic/reports", key: "reports", icon: BarChart3 },

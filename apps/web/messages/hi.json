@@ -30,7 +30,14 @@
     "statClinics": "सहयोगी क्लिनिक",
     "statQueue": "कतार ट्रैकिंग",
     "statQueueValue": "लाइव",
-    "searchUnifiedPlaceholder": "नाम या स्थान द्वारा खोजें..."
+    "searchUnifiedPlaceholder": "डॉक्टर, क्लिनिक, उपचार खोजें...",
+    "eyebrow": "एक बेहतर कल के लिए भरोसेमंद स्वास्थ्य सेवा",
+    "headlineA": "आपका स्वास्थ्य",
+    "headlineB": "हमारी प्राथमिकता",
+    "heroSubtitle": "भरोसेमंद डॉक्टर, नज़दीकी क्लिनिक खोजें, अपॉइंटमेंट बुक करें — सब एक ही जगह।",
+    "popularLabel": "लोकप्रिय खोजें",
+    "trustedBy": "खुश मरीज़ हम पर भरोसा करते हैं",
+    "trustedCount": "10,000+"
   },
   "Specialties": {
     "title": "विशेषज्ञता द्वारा खोजें",
@@ -230,7 +237,8 @@
     "requests": "अनुरोध",
     "referrals": "रेफ़रल",
     "reports": "रिपोर्ट",
-    "settings": "Settings"
+    "settings": "Settings",
+    "followUps": "फ़ॉलो-अप"
   },
   "ClinicDashboard": {
     "title": "ऑपरेशनल डैशबोर्ड",

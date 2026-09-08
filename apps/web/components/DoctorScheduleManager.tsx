@@ -118,6 +118,19 @@ export default function DoctorScheduleManager({ clinicId }: { clinicId: string }
     }
   };
 
+  // Block ONLINE booking for one session (walk-in / reception still work)
+  const handleToggleOnlineBooking = async (scheduleId: string, next: boolean) => {
+    try {
+      await api.put(`/doctors/${doctor.id}/clinics/${clinicId}/schedules/${scheduleId}`, {
+        onlineBookingEnabled: next,
+      });
+      toast.success(next ? "Online booking enabled for this session" : "Online booking blocked — walk-in still works");
+      fetchExistingSchedules(doctor.id);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to update.");
+    }
+  };
+
   // DELETE SCHEDULE
   const handleDeleteSchedule = async (scheduleId: string) => {
     if (!confirm("Are you sure you want to delete this session?")) return;
@@ -200,6 +213,22 @@ export default function DoctorScheduleManager({ clinicId }: { clinicId: string }
                     ) : (
                       <p className="text-xs font-medium text-slate-500 flex items-center gap-1 mt-1"><Users className="h-3 w-3"/> Capacity: <span className="font-bold text-slate-700 dark:text-slate-300">{s.maxPatients}</span></p>
                     )}
+
+                    {/* Online booking toggle — walk-in/reception always work */}
+                    <div className="mt-2 flex items-center justify-between border-t border-slate-200 pt-2 dark:border-slate-700">
+                      <span className="text-[11px] font-semibold text-slate-500">Online booking</span>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleOnlineBooking(s.id, !(s.onlineBookingEnabled !== false))}
+                        className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold transition ${
+                          s.onlineBookingEnabled !== false
+                            ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
+                            : "bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-300"
+                        }`}
+                      >
+                        {s.onlineBookingEnabled !== false ? "ON" : "OFF (walk-in only)"}
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>

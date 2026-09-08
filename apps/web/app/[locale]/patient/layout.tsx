@@ -8,6 +8,8 @@ import {
   ChevronRight,
   HeartPulse,
   ShieldCheck,
+  CalendarClock,
+  FlaskConical,
 } from "lucide-react";
 
 import { useAuth } from "@/lib/auth-context";
@@ -22,6 +24,18 @@ const NAV = [
     label: "Overview",
     icon: LayoutDashboard,
     exact: true,
+  },
+  {
+    href: "/patient/follow-ups",
+    label: "Follow-ups",
+    icon: CalendarClock,
+    exact: false,
+  },
+  {
+    href: "/patient/tests",
+    label: "My Tests",
+    icon: FlaskConical,
+    exact: false,
   },
   {
     href: "/patient/profile",

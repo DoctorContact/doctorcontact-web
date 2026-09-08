@@ -200,6 +200,57 @@ export function useUnverifiedDoctors() {
   });
 }
 
+export interface CreateDoctorInput {
+  name: string;
+  email?: string;
+  phone?: string;
+  password: string;
+  clinicId?: string; // optional — a doctor can be added without a clinic
+  specialization?: string;
+  qualification?: string;
+  experience?: number;
+  fee?: number;
+}
+
+export function useCreateDoctor() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: CreateDoctorInput) => {
+      const res = await api.post("/admin/doctors", payload);
+      return res.data.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin", "doctors"] });
+      qc.invalidateQueries({ queryKey: ["admin", "stats"] });
+    },
+  });
+}
+
+// Global bookings feed (Super Admin only)
+export interface AdminBookingsParams {
+  clinicId?: string;
+  status?: string;
+  from?: string;
+  to?: string;
+  page?: number;
+  limit?: number;
+}
+
+export function useAdminBookings(params: AdminBookingsParams = {}) {
+  return useQuery({
+    queryKey: ["admin", "bookings", params],
+    queryFn: async () => {
+      const res = await api.get("/admin/bookings", { params });
+      return res.data.data as {
+        items: any[];
+        total: number;
+        page: number;
+        limit: number;
+      };
+    },
+  });
+}
+
 export function useVerifyDoctor() {
   const qc = useQueryClient();
   return useMutation({

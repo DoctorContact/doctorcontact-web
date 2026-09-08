@@ -30,7 +30,14 @@
     "statClinics": "পার্টনার ক্লিনিক",
     "statQueue": "কিউ ট্র্যাকিং",
     "statQueueValue": "লাইভ",
-    "searchUnifiedPlaceholder": "নাম বা লোকেশন দিয়ে খুঁজুন..."
+    "searchUnifiedPlaceholder": "ডাক্তার, ক্লিনিক, চিকিৎসা খুঁজুন...",
+    "eyebrow": "উজ্জ্বল আগামীর জন্য নির্ভরযোগ্য স্বাস্থ্যসেবা",
+    "headlineA": "আপনার স্বাস্থ্য",
+    "headlineB": "আমাদের অগ্রাধিকার",
+    "heroSubtitle": "নির্ভরযোগ্য ডাক্তার, কাছের ক্লিনিক খুঁজুন, অ্যাপয়েন্টমেন্ট বুক করুন — সব এক জায়গায়।",
+    "popularLabel": "জনপ্রিয় অনুসন্ধান",
+    "trustedBy": "জন খুশি রোগী আমাদের উপর ভরসা রাখেন",
+    "trustedCount": "১০,০০০+"
   },
   "Specialties": {
     "title": "স্পেশালিটি অনুযায়ী খুঁজুন",
@@ -234,7 +241,8 @@
     "requests": "অনুরোধসমূহ",
     "referrals": "রেফারেল",
     "reports": "রিপোর্ট্স",
-    "settings": "Settings"
+    "settings": "Settings",
+    "followUps": "ফলো-আপ"
   },
   "ClinicDashboard": {
     "title": "অপারেশনাল ড্যাশবোর্ড",

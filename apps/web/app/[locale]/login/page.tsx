@@ -46,7 +46,7 @@ function routeForRole(role: string) {
     case "DIAGNOSTIC_CENTER":
       return "/diagnosticCenter/dashboard";
     case "DIAGNOSTIC_STAFF":
-      return "/diagnosticCenter/referrals";
+      return "/diagnosticStaff/dashboard";
     case "SUPER_ADMIN":
       return "/super_admin/dashboard";
     case "ADMIN":

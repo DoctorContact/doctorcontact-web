@@ -99,6 +99,16 @@ export function useToggleOnlineConsultation() {
   });
 }
 
+// ON/OFF switch for automatic follow-up after 1 month with no visit.
+export function useToggleAutoFollowup() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (enabled: boolean) =>
+      (await api.patch("/clinic/auto-followup", { enabled })).data.data.clinic,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["clinic", "profile"] }),
+  });
+}
+
 // ---------------- Doctors ----------------
 
 export function useClinicDoctors() {

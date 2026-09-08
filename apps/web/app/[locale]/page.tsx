@@ -1,12 +1,13 @@
 import { setRequestLocale } from "next-intl/server";
 import Hero from "@/components/Hero";
+import HomeQuickLinks from "@/components/HomeQuickLinks";
 import FeaturedDoctors from "@/components/FeaturedDoctors";
 import AllDoctors from "@/components/AllDoctors";
+import Treatments from "@/components/Treatments";
 import FeaturedClinics from "@/components/FeaturedClinics";
 import AllClinics from "@/components/AllClinics";
-import Specialties from "@/components/Specialties";
-import HowItWorks from "@/components/HowItWorks";
-import ClinicCTA from "@/components/ClinicCTA";
+import LabsAmbulance from "@/components/LabsAmbulance";
+import TrustBar from "@/components/TrustBar";
 
 export default async function HomePage({
   params,
@@ -19,13 +20,14 @@ export default async function HomePage({
   return (
     <main className="min-h-screen bg-white dark:bg-[var(--color-bg)]">
       <Hero />
+      <HomeQuickLinks />
       <FeaturedDoctors />
       <AllDoctors />
+      <Treatments />
       <FeaturedClinics />
       <AllClinics />
-      <Specialties />
-      <HowItWorks />
-      <ClinicCTA />
+      <LabsAmbulance />
+      <TrustBar />
     </main>
   );
 }

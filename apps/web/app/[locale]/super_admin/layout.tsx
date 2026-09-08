@@ -19,6 +19,7 @@ import {
   CalendarClock,
   Star,
   Megaphone,
+  ClipboardList,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import type { LucideIcon } from "lucide-react";
@@ -70,6 +71,16 @@ const SUPER_ADMIN_NAV_SECTIONS: NavSection[] = [
         href: "/super_admin/doctor-availability",
         label: "Doctor Availability",
         icon: CalendarClock,
+      },
+    ],
+  },
+  {
+    title: "Operations",
+    items: [
+      {
+        href: "/super_admin/bookings",
+        label: "All Bookings",
+        icon: ClipboardList,
       },
     ],
   },

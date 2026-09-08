@@ -16,6 +16,7 @@ import {
   ChevronRight,
   ShieldCheck,
   Settings,
+  CalendarClock,
 } from "lucide-react";
 
 import { useTranslations } from "next-intl";
@@ -28,6 +29,7 @@ import {
   useUploadClinicLogo,
   useClinicDoctors,
   useClinicReceptionists,
+  useToggleAutoFollowup,
 } from "@/lib/hooks/useClinic";
 
 // ============================================================
@@ -703,6 +705,12 @@ export default function ClinicOverviewPage() {
       </SettingsCard>
 
       {/* ======================================================
+          AUTOMATIC FOLLOW-UP
+          ====================================================== */}
+
+      {clinic && <AutoFollowupToggle enabled={!!(clinic as any).autoFollowupEnabled} />}
+
+      {/* ======================================================
           FOOT NOTE
           ====================================================== */}
 
@@ -716,6 +724,60 @@ export default function ClinicOverviewPage() {
       </div>
 
     </div>
+  );
+}
+
+// ============================================================
+// AUTOMATIC FOLLOW-UP TOGGLE
+// ============================================================
+
+function AutoFollowupToggle({ enabled }: { enabled: boolean }) {
+  const toggle = useToggleAutoFollowup();
+  const [on, setOn] = useState(enabled);
+
+  async function flip() {
+    const next = !on;
+    setOn(next);
+    try {
+      await toggle.mutateAsync(next);
+      toast.success(
+        next
+          ? "Automatic follow-up enabled — patients with no visit in a month will be auto-scheduled."
+          : "Automatic follow-up disabled.",
+      );
+    } catch {
+      setOn(!next);
+      toast.error("Could not update the setting.");
+    }
+  }
+
+  return (
+    <SettingsCard>
+      <div className="flex items-center gap-3 p-4 sm:p-5">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-[#1C63E7]">
+          <CalendarClock className="h-5 w-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <h3 className="text-xs font-bold text-slate-800 sm:text-sm dark:text-white">
+            Automatic follow-up after 1 month
+          </h3>
+          <p className="mt-0.5 text-[10px] leading-relaxed text-slate-500 sm:text-xs dark:text-ink-500">
+            When ON, any patient with no visit in the last month is auto-scheduled a follow-up and notified.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={flip}
+          disabled={toggle.isPending}
+          aria-pressed={on}
+          className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${on ? "bg-[#1C63E7]" : "bg-slate-300 dark:bg-slate-600"}`}
+        >
+          <span
+            className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${on ? "translate-x-5" : "translate-x-0.5"}`}
+          />
+        </button>
+      </div>
+    </SettingsCard>
   );
 }
 
