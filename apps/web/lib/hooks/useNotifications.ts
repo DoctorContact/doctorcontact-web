@@ -12,7 +12,8 @@ export function useUnreadCount() {
       return data.data.count;
     },
     enabled: !!user,
-    refetchInterval: 30000,
+    // No polling — useNotificationSocket keeps this cache live via the
+    // `newNotification` socket event (Rule 5: absolutely no polling).
   });
 }
 

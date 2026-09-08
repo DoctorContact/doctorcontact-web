@@ -174,6 +174,16 @@ export const fetchLiveDoctors = async () => {
     return [];
   }
 };
+export const fetchLiveDoctorsCount = async (): Promise<number> => {
+  try {
+    const response = await api.get('/doctors/live/count');
+    return response.data?.data?.count ?? 0;
+  } catch (error) {
+    console.error("Failed to fetch live doctor count:", error);
+    return 0;
+  }
+};
+
 export const fetchAvailableDoctors = async () => {
   try {
     const response = await api.get('/doctors/available');

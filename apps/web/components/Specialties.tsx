@@ -6,46 +6,21 @@ import { Loader2 } from "lucide-react";
 import { Link } from "@/i18n/routing";
 import { api } from "@/lib/api";
 
-const DEFAULT_SPECIALTIES = [
-  { id: "1", name: "Physician", iconUrl: "/categories/physician.png" },
-  { id: "2", name: "Pediatrics", iconUrl: "/categories/pediatrics.png" },
-  { id: "3", name: "Gynecology", iconUrl: "/categories/gynecology.png" },
-  { id: "4", name: "Orthopedic", iconUrl: "/categories/orthopedic.png" },
-  { id: "5", name: "ENT", iconUrl: "/categories/ent.png" },
-  { id: "6", name: "Dental", iconUrl: "/categories/dental.png" },
-  { id: "7", name: "Dermatology", iconUrl: "/categories/dermatology.png" },
-  { id: "8", name: "Ophthalmology", iconUrl: "/categories/ophthalmology.png" },
-  { id: "9", name: "Surgeon", iconUrl: "/categories/surgeon.png" },
-  { id: "10", name: "Cardiology", iconUrl: "/categories/cardiology.png" },
-  { id: "11", name: "Gastroenterology", iconUrl: "/categories/gastroenterology.png" },
-  { id: "12", name: "Pulmonology", iconUrl: "/categories/pulmonology.png" },
-  { id: "13", name: "Urology", iconUrl: "/categories/urology.png" },
-  { id: "14", name: "Endocrinology", iconUrl: "/categories/endocrinology.png" },
-  { id: "15", name: "Neurology", iconUrl: "/categories/neurology.png" },
-  { id: "16", name: "Nephrology", iconUrl: "/categories/nephrology.png" },
-  { id: "17", name: "Rheumatology", iconUrl: "/categories/rheumatology.png" },
-  { id: "18", name: "Psychiatry", iconUrl: "/categories/psychiatry.png" },
-  { id: "19", name: "Oncology", iconUrl: "/categories/oncology.png" },
-  { id: "20", name: "Physiotherapy", iconUrl: "/categories/physiotherapy.png" },
-  { id: "21", name: "Nutrition", iconUrl: "/categories/nutrition.png" },
-];
-
 export default function Specialties() {
   const t = useTranslations("Specialties");
   const [specialties, setSpecialties] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Specializations are managed by the Super Admin and stored in the DB
+  // (master requirement #9/#51 — the list must NOT be hardcoded in the frontend).
   useEffect(() => {
     async function fetchSpecialties() {
       try {
         const res = await api.get("/specializations");
-        if (res.data?.success && res.data.data?.specializations?.length > 0) {
-          setSpecialties(res.data.data.specializations);
-        } else {
-          setSpecialties(DEFAULT_SPECIALTIES);
-        }
+        const list = res.data?.data?.specializations;
+        setSpecialties(Array.isArray(list) ? list : []);
       } catch {
-        setSpecialties(DEFAULT_SPECIALTIES);
+        setSpecialties([]);
       } finally {
         setIsLoading(false);
       }
@@ -63,6 +38,8 @@ export default function Specialties() {
       </section>
     );
   }
+
+  if (specialties.length === 0) return null;
 
   return (
     <section className="mx-auto max-w-7xl px-4 py-16">

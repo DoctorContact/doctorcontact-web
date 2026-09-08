@@ -22,16 +22,25 @@ import { useTranslations, useLocale } from "next-intl";
 
 import { useAuth } from "@/lib/auth-context";
 import { Link, useRouter, usePathname } from "@/i18n/routing";
+import { fetchSearchLocations } from "@/lib/api";
 
 import NotificationBell from "./NotificationBell";
+import { useLiveDoctorsCount } from "@/lib/hooks/useLiveDoctors";
+
+interface SearchLocation {
+  id: string;
+  nameEn: string;
+  nameBn: string;
+  nameHi: string;
+}
+
+const LOCATION_STORAGE_KEY = "dc.selectedCity";
 
 const LOCALES = [
   { code: "bn", label: "বাংলা" },
   { code: "en", label: "English" },
   { code: "hi", label: "हिन्दी" },
 ];
-
-const LOCATIONS = ["Dubrajpur", "Suri", "Bolpur", "Rampurhat", "Kolkata"];
 
 export default function Header() {
   const t = useTranslations("HomePage");
@@ -43,11 +52,49 @@ export default function Header() {
   const router = useRouter();
   const pathname = usePathname();
 
+  const { data: liveCount = 0 } = useLiveDoctorsCount();
+
   const [open, setOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState("Dubrajpur");
+  const [locations, setLocations] = useState<SearchLocation[]>([]);
+  const [selectedCity, setSelectedCity] = useState<string | null>(null);
   const [showLocationMenu, setShowLocationMenu] = useState(false);
+
+  useEffect(() => {
+    fetchSearchLocations()
+      .then((list) => setLocations(Array.isArray(list) ? list : []))
+      .catch(() => setLocations([]));
+    try {
+      const saved = localStorage.getItem(LOCATION_STORAGE_KEY);
+      if (saved) setSelectedCity(saved);
+    } catch {
+      /* localStorage unavailable */
+    }
+  }, []);
+
+  const localizedName = (loc: SearchLocation) =>
+    currentLocale === "bn" ? loc.nameBn : currentLocale === "hi" ? loc.nameHi : loc.nameEn;
+
+  function selectCity(loc: SearchLocation | null) {
+    const city = loc ? loc.nameEn : null;
+    setSelectedCity(city);
+    setShowLocationMenu(false);
+    try {
+      if (city) localStorage.setItem(LOCATION_STORAGE_KEY, city);
+      else localStorage.removeItem(LOCATION_STORAGE_KEY);
+    } catch {
+      /* ignore */
+    }
+    router.push(city ? `/doctors?city=${encodeURIComponent(city)}` : "/doctors");
+  }
+
+  const selectedLabel =
+    (selectedCity &&
+      (locations.find((l) => l.nameEn === selectedCity)
+        ? localizedName(locations.find((l) => l.nameEn === selectedCity)!)
+        : selectedCity)) ||
+    "All Locations";
 
   const moreRef = useRef<HTMLDivElement>(null);
   const userRef = useRef<HTMLDivElement>(null);
@@ -239,17 +286,25 @@ export default function Header() {
 
         {/* ================= RIGHT CONTROLS ================= */}
         <div className="flex items-center gap-2.5 sm:gap-3">
-          {/* Live Doctors Pill */}
+          {/* Live Doctors Pill — real backend-driven count, updated via the
+              `liveDoctorsChanged` socket event (no polling). */}
           <Link
-            href="/doctors/available"
-            className="flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[#e11d48] to-[#db2777] px-3 py-1.5 text-xs font-bold text-white shadow-sm transition hover:opacity-95"
+            href="/doctors?live=true"
+            title={`${liveCount} doctor${liveCount === 1 ? "" : "s"} live right now`}
+            className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold text-white shadow-sm transition hover:opacity-95 ${
+              liveCount > 0
+                ? "bg-gradient-to-r from-[#e11d48] to-[#db2777]"
+                : "bg-slate-400"
+            }`}
           >
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
-            </span>
+            {liveCount > 0 && (
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
+              </span>
+            )}
             <Radio className="h-3 w-3 text-white" />
-            <span>Live</span>
+            <span>{liveCount > 0 ? `${liveCount} Live` : "Live"}</span>
           </Link>
 
           {/* Location Selector Pill */}
@@ -259,28 +314,36 @@ export default function Header() {
               className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50/80 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-soft-300 dark:bg-surface dark:text-ink-700"
             >
               <MapPin className="h-3.5 w-3.5 text-[#1C63E7]" />
-              <span>{selectedLocation}</span>
+              <span>{selectedLabel}</span>
               <ChevronDown className="h-3 w-3 text-slate-400" />
             </button>
 
             {showLocationMenu && (
-              <div className="absolute right-0 mt-2 w-36 rounded-xl border border-slate-100 bg-white p-1 shadow-lg dark:border-soft-300 dark:bg-surface z-50">
-                {LOCATIONS.map((loc) => (
+              <div className="absolute right-0 mt-2 max-h-72 w-40 overflow-y-auto rounded-xl border border-slate-100 bg-white p-1 shadow-lg dark:border-soft-300 dark:bg-surface z-50">
+                <button
+                  onClick={() => selectCity(null)}
+                  className={`flex w-full items-center px-3 py-1.5 text-xs rounded-lg transition text-left ${
+                    !selectedCity ? "bg-blue-50 font-bold text-[#1C63E7]" : "text-slate-600 hover:bg-slate-50"
+                  }`}
+                >
+                  All Locations
+                </button>
+                {locations.map((loc) => (
                   <button
-                    key={loc}
-                    onClick={() => {
-                      setSelectedLocation(loc);
-                      setShowLocationMenu(false);
-                    }}
+                    key={loc.id}
+                    onClick={() => selectCity(loc)}
                     className={`flex w-full items-center px-3 py-1.5 text-xs rounded-lg transition text-left ${
-                      selectedLocation === loc
+                      selectedCity === loc.nameEn
                         ? "bg-blue-50 font-bold text-[#1C63E7]"
                         : "text-slate-600 hover:bg-slate-50"
                     }`}
                   >
-                    {loc}
+                    {localizedName(loc)}
                   </button>
                 ))}
+                {locations.length === 0 && (
+                  <p className="px-3 py-2 text-[11px] text-slate-400">No locations configured</p>
+                )}
               </div>
             )}
           </div>

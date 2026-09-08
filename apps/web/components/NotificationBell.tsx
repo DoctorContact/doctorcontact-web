@@ -1,47 +1,45 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Bell } from "lucide-react";
-import { fetchMyNotifications } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
+import {
+  useMyNotifications,
+  useUnreadCount,
+  useMarkAllNotificationsRead,
+} from "@/lib/hooks/useNotifications";
 
 export default function NotificationBell() {
-  const [notifications, setNotifications] = useState<any[]>([]);
+  const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
 
-  useEffect(() => {
-    const loadNotifications = async () => {
-      if (typeof window === "undefined") return;
+  // Query cache is kept live by useNotificationSocket (mounted in SocketProvider) —
+  // every `newNotification` socket event prepends here and bumps the unread count.
+  // No polling.
+  const { data: notifications = [] } = useMyNotifications(!!user);
+  const { data: unreadCount = 0 } = useUnreadCount();
+  const markAllRead = useMarkAllNotificationsRead();
 
-      // Prevent fetching on login/register pages to avoid 401 errors
-      const pathname = window.location.pathname;
-      if (pathname.includes("/login") || pathname.includes("/register")) return;
-
-      try {
-        const data = await fetchMyNotifications();
-        // Fallback safety to prevent "map is not a function" crash
-        if (Array.isArray(data)) {
-          setNotifications(data);
-        } else {
-          setNotifications([]);
-        }
-      } catch (error) {
-        console.error("Failed to load notifications UI:", error);
-        setNotifications([]);
-      }
-    };
-    
-    loadNotifications();
-  }, []);
+  function toggleOpen() {
+    const next = !isOpen;
+    setIsOpen(next);
+    if (next && unreadCount > 0) {
+      markAllRead.mutate();
+    }
+  }
 
   return (
     <div className="relative">
-      <button 
-        onClick={() => setIsOpen(!isOpen)}
+      <button
+        onClick={toggleOpen}
         className="relative p-2 rounded-full text-slate-600 hover:bg-slate-100 transition-colors"
+        aria-label="Notifications"
       >
         <Bell className="h-5 w-5" />
-        {notifications.length > 0 && (
-          <span className="absolute top-1 right-1 flex h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white"></span>
+        {unreadCount > 0 && (
+          <span className="absolute top-0.5 right-0.5 flex min-h-[16px] min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white ring-2 ring-white">
+            {unreadCount > 9 ? "9+" : unreadCount}
+          </span>
         )}
       </button>
 
@@ -57,7 +55,10 @@ export default function NotificationBell() {
               </div>
             ) : (
               notifications.map((notif) => (
-                <div key={notif.id} className="p-4 border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                <div
+                  key={notif.id}
+                  className="p-4 border-b border-slate-50 hover:bg-slate-50 transition-colors"
+                >
                   <p className="text-sm font-medium text-slate-800">{notif.title}</p>
                   <p className="text-xs text-slate-500 mt-1">{notif.message}</p>
                 </div>

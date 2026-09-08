@@ -21,6 +21,7 @@ import { GradientCard } from "@/components/ui/GradientCard";
 
 import AddLocationForm from "./components/AddLocationForm";
 import AddSpecializationForm from "./components/AddSpecializationForm";
+import ManageSpecializations from "./components/ManageSpecializations";
 
 export default function AdminSettingsPage() {
   const t = useTranslations("AdminSettings");
@@ -241,9 +242,12 @@ export default function AdminSettingsPage() {
             <AddLocationForm />
           </div>
 
-          {/* Specialization Management Form (Full Width) */}
+          {/* Specialization Management (Full Width) */}
           <div className="lg:col-span-2">
             <AddSpecializationForm />
+          </div>
+          <div className="lg:col-span-2">
+            <ManageSpecializations />
           </div>
 
         </div>
