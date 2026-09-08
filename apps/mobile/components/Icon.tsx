@@ -101,7 +101,7 @@ export function Icon({ name, size = 20, color = '#111827' }: IconProps) {
     case 'message-circle':
       return <Ionicon name="chatbubble-ellipses-outline" size={size} color={color} />;
     case 'sparkles':
-      return <MaterialCommunityIcon name="sparkles" size={size} color={color} />;
+      return <Ionicon name="sparkles-outline" size={size} color={color} />;
     case 'log-out':
       return <FeatherIcon name="log-out" size={size} color={color} />;
     case 'check-circle':
