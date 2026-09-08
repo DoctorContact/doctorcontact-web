@@ -14,7 +14,6 @@ import {
   Info,
   Megaphone,
   Globe,
-  HeartPulse,
 } from "lucide-react";
 import Image from "next/image";
 import { useState, useRef, useEffect } from "react";
@@ -174,8 +173,15 @@ export default function Header() {
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* ================= LOGO ================= */}
         <Link href="/" className="flex items-center gap-2.5 shrink-0">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#1C63E7] text-white shadow-sm">
-            <HeartPulse className="h-5 w-5 text-white" />
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white p-1 shadow-sm dark:border-soft-300 dark:bg-surface">
+            <Image
+              src="/logo-icon.png"
+              alt="Doctor Contact"
+              width={36}
+              height={36}
+              priority
+              className="h-full w-full object-contain"
+            />
           </div>
           <div className="flex flex-col">
             <span className="text-base font-extrabold tracking-tight text-[#0F1B33] dark:text-ink-900 leading-none">
