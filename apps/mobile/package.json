@@ -5,6 +5,8 @@
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
+    "start:tunnel": "expo start --tunnel",
+    "start:lan": "set REACT_NATIVE_PACKAGER_HOSTNAME=192.168.1.13&& expo start -c",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "type-check": "tsc --noEmit"
