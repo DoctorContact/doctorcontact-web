@@ -257,6 +257,9 @@ export function useUpdateCenterWorkingHours() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["diagnostic-center", "working-hours"] });
+      qc.invalidateQueries({ queryKey: ["diagnostic-center", "profile"] });
+      qc.invalidateQueries({ queryKey: ["diagnostic-centers", "all"] });
+      qc.invalidateQueries({ queryKey: ["public-center"] });
     },
   });
 }

@@ -1228,7 +1228,7 @@ export default function AllLabsPage() {
             "
           >
 
-            {filteredCenters.map((center: any) => {
+            {filteredCenters.map((center: any, index: number) => {
 
               /* =================================================
                  WHATSAPP NUMBER
@@ -1245,6 +1245,25 @@ export default function AllLabsPage() {
                 cleanWa.length === 10
                   ? `91${cleanWa}`
                   : cleanWa;
+
+              /* =================================================
+                 LCP: only eager/priority-load the images that are
+                 likely above the fold on first paint (first row).
+                 Everything after that stays lazy-loaded.
+              ================================================= */
+
+              const isAboveFold = index < 4;
+
+              /* =================================================
+                 Responsive sizes matching the grid breakpoints:
+                 1 col on mobile, 2 on sm, 3 on lg, 4 on xl.
+                 Using the real rendered width instead of 100vw
+                 stops the browser from downloading an oversized
+                 image for every card.
+              ================================================= */
+
+              const cardImageSizes =
+                "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw";
 
               return (
 
@@ -1305,7 +1324,8 @@ export default function AllLabsPage() {
                             alt=""
                             fill
                             aria-hidden="true"
-                            sizes="100vw"
+                            sizes={cardImageSizes}
+                            priority={isAboveFold}
                             className="scale-125 object-cover opacity-25 blur-2xl"
                           />
 
@@ -1314,8 +1334,8 @@ export default function AllLabsPage() {
                               src={center.logo}
                               alt={center.centerName}
                               fill
-                              priority={false}
-                              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
+                              priority={isAboveFold}
+                              sizes={cardImageSizes}
                               className="object-contain object-center drop-shadow-[0_8px_18px_rgba(15,23,42,0.12)] transition-transform duration-500 group-hover:scale-[1.012]"
                             />
                           </div>
@@ -1440,8 +1460,10 @@ export default function AllLabsPage() {
                         className="
                           mt-2.5
                           flex
-                          flex-wrap
+                          flex-nowrap
+                          items-center
                           gap-1.5
+                          overflow-x-auto
                         "
                       >
 
@@ -1518,6 +1540,131 @@ export default function AllLabsPage() {
                         )}
 
                       </div>
+
+                      {/* =================================================
+                          AVAILABLE TESTS
+                      ================================================= */}
+
+                      {center.centerTests &&
+                        center.centerTests.length > 0 && (
+
+                        <div
+                          className="
+                            mt-3
+                            border-t
+                            border-slate-100
+                            pt-3
+                            dark:border-slate-800
+                          "
+                        >
+
+                          <div
+                            className="
+                              mb-2
+                              flex
+                              items-center
+                              justify-between
+                            "
+                          >
+
+                            <p
+                              className="
+                                text-[9px]
+                                font-bold
+                                uppercase
+                                tracking-wide
+                                text-slate-400
+                              "
+                            >
+                              Available Tests
+                            </p>
+
+                            <span
+                              className="
+                                text-[9px]
+                                font-bold
+                                text-[#14B8A6]
+                              "
+                            >
+                              {center.centerTests.length}
+                            </span>
+
+                          </div>
+
+                          <div
+                            className="
+                              flex
+                              flex-wrap
+                              gap-1
+                            "
+                          >
+
+                            {center.centerTests
+                              .slice(0, 5)
+                              .map((ct: any) => (
+
+                                <span
+                                  key={ct.id}
+                                  className="
+                                    max-w-full
+                                    rounded-md
+                                    border
+                                    border-teal-200
+                                    bg-gradient-to-r
+                                    from-[#252a67]/10
+                                    to-[#14B8A6]/10
+                                    px-1.5
+                                    py-1
+                                    text-[9px]
+                                    font-bold
+                                    text-[#14523f]
+                                    dark:border-teal-800/40
+                                    dark:from-teal-900/20
+                                    dark:to-teal-900/20
+                                    dark:text-teal-300
+                                  "
+                                >
+
+                                  <span
+                                    className="
+                                      block
+                                      max-w-[120px]
+                                      truncate
+                                    "
+                                  >
+                                    {ct.diagnosticTest?.name}
+                                  </span>
+
+                                </span>
+
+                              ))}
+
+                            {center.centerTests.length > 5 && (
+
+                              <span
+                                className="
+                                  rounded-md
+                                  bg-gradient-to-r
+                                  from-[#252a67]/10
+                                  to-[#14B8A6]/10
+                                  px-1.5
+                                  py-1
+                                  text-[9px]
+                                  font-bold
+                                  text-[#3b4a8f]
+                                  dark:text-teal-400
+                                "
+                              >
+                                +{center.centerTests.length - 5}
+                              </span>
+
+                            )}
+
+                          </div>
+
+                        </div>
+
+                      )}
 
                       {/* =================================================
                           QUICK ACTIONS
@@ -1670,127 +1817,6 @@ export default function AllLabsPage() {
 
                       )}
 
-                      {/* =================================================
-                          AVAILABLE TESTS
-                      ================================================= */}
-
-                      {center.centerTests &&
-                        center.centerTests.length > 0 && (
-
-                        <div
-                          className="
-                            mt-3
-                            border-t
-                            border-slate-100
-                            pt-3
-                            dark:border-slate-800
-                          "
-                        >
-
-                          <div
-                            className="
-                              mb-2
-                              flex
-                              items-center
-                              justify-between
-                            "
-                          >
-
-                            <p
-                              className="
-                                text-[9px]
-                                font-bold
-                                uppercase
-                                tracking-wide
-                                text-slate-400
-                              "
-                            >
-                              Available Tests
-                            </p>
-
-                            <span
-                              className="
-                                text-[9px]
-                                font-bold
-                                text-[#14B8A6]
-                              "
-                            >
-                              {center.centerTests.length}
-                            </span>
-
-                          </div>
-
-                          <div
-                            className="
-                              flex
-                              flex-wrap
-                              gap-1
-                            "
-                          >
-
-                            {center.centerTests
-                              .slice(0, 3)
-                              .map((ct: any) => (
-
-                                <span
-                                  key={ct.id}
-                                  className="
-                                    max-w-full
-                                    rounded-md
-                                    border
-                                    border-slate-100
-                                    bg-slate-50
-                                    px-1.5
-                                    py-1
-                                    text-[9px]
-                                    font-medium
-                                    text-slate-600
-                                    dark:border-slate-800
-                                    dark:bg-slate-800
-                                    dark:text-slate-300
-                                  "
-                                >
-
-                                  <span
-                                    className="
-                                      block
-                                      max-w-[120px]
-                                      truncate
-                                    "
-                                  >
-                                    {ct.diagnosticTest?.name}
-                                  </span>
-
-                                </span>
-
-                              ))}
-
-                            {center.centerTests.length > 3 && (
-
-                              <span
-                                className="
-                                  rounded-md
-                                  bg-gradient-to-r
-                                  from-[#252a67]/10
-                                  to-[#14B8A6]/10
-                                  px-1.5
-                                  py-1
-                                  text-[9px]
-                                  font-bold
-                                  text-[#3b4a8f]
-                                  dark:text-teal-400
-                                "
-                              >
-                                +{center.centerTests.length - 3}
-                              </span>
-
-                            )}
-
-                          </div>
-
-                        </div>
-
-                      )}
 
                       {/* =================================================
                           CTA
