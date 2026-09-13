@@ -69,6 +69,7 @@ api.interceptors.response.use(
   }
 );
 
+
 function handleLogoutAndRedirect(error: any) {
     setAccessToken(null);
     if (typeof window !== "undefined") {
