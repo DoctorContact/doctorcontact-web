@@ -122,18 +122,35 @@ export default function PublicLabDetailsPage() {
 
   /* ================================
      BOOK TEST
+     ------------------------------------------------
+     There is no online booking flow yet, so instead of
+     showing a fake "Proceeding to book" toast, the
+     "Book Now" button on each test card now directly
+     calls the lab's phone number — the person can book
+     the test over the call. If the lab hasn't listed a
+     phone number, fall back to WhatsApp, and only show
+     an error toast if neither is available.
   ================================= */
 
   const handleBookTest = (testName: string) => {
-    if (!user) {
-      toast.error("Please login to book a test.");
-      router.push("/login");
+    if (center.phone) {
+      window.open(`tel:${center.phone}`, "_self");
       return;
     }
 
-    toast.success(`Proceeding to book: ${testName}`);
+    if (center.whatsapp) {
+      const cleanWa = center.whatsapp.replace(/[^0-9]/g, "");
+      const waNumber = cleanWa.length === 10 ? `91${cleanWa}` : cleanWa;
 
-    // router.push(`/book?centerId=${center.id}&test=${testName}`);
+      const message = encodeURIComponent(
+        `Hi, I'd like to book "${testName}" at ${center.centerName}.`
+      );
+
+      window.open(`https://wa.me/${waNumber}?text=${message}`, "_blank");
+      return;
+    }
+
+    toast.error("No contact number available for this lab.");
   };
 
   return (
@@ -173,14 +190,15 @@ export default function PublicLabDetailsPage() {
                 <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-2xl border-4 border-white bg-slate-50 shadow-lg dark:border-slate-800 dark:bg-slate-900 sm:h-32 sm:w-32">
 
                   {center.logo ? (
-                    <Image
-                      src={center.logo}
-                      alt={center.centerName}
-                      fill
-                      sizes="(max-width: 640px) 96px, 128px"
-                      className="object-cover object-top"
-                    />
-                  ) : (
+  <Image
+    src={center.logo}
+    alt={center.centerName}
+    fill
+    priority
+    sizes="(max-width: 640px) 96px, 128px"
+    className="object-cover object-top"
+  />
+) : (
                     <div className="flex h-full w-full items-center justify-center bg-blue-50 dark:bg-blue-900/30">
                       <Building2 className="h-10 w-10 text-blue-500 sm:h-12 sm:w-12" />
                     </div>
@@ -505,14 +523,15 @@ export default function PublicLabDetailsPage() {
                       </div>
 
 
-                      {/* BOOK BUTTON */}
+                      {/* BOOK BUTTON — now dials the lab directly */}
 
                       <button
                         onClick={() =>
                           handleBookTest(ct.diagnosticTest?.name)
                         }
-                        className="flex shrink-0 items-center justify-center rounded-lg bg-gradient-to-r from-[#252a67] to-[#3b4a8f] px-2.5 py-1.5 text-[9px] font-bold text-white shadow-sm transition-all duration-200 hover:from-[#1e2257] hover:to-[#14B8A6] hover:shadow-md active:scale-95 sm:rounded-xl sm:px-4 sm:py-2.5 sm:text-xs"
+                        className="flex shrink-0 items-center justify-center gap-1 rounded-lg bg-gradient-to-r from-[#252a67] to-[#3b4a8f] px-2.5 py-1.5 text-[9px] font-bold text-white shadow-sm transition-all duration-200 hover:from-[#1e2257] hover:to-[#14B8A6] hover:shadow-md active:scale-95 sm:rounded-xl sm:px-4 sm:py-2.5 sm:text-xs"
                       >
+                        <Phone className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                         Book Now
                       </button>
 
