@@ -13,6 +13,7 @@ import { QueueStatusCard } from "./components/QueueStatusCard";
 import { CurrentPatientCard } from "./components/CurrentPatientCard";
 import { QueueActions } from "./components/QueueActions";
 import { QuickQueueControl } from "./components/QuickQueueControl";
+import { DelayQuickNotify } from "./components/DelayQuickNotify";
 import { SessionSelector } from "./components/SessionSelector";
 import { QueueList } from "./components/QueueList";
 import { QueueSkeleton } from "./components/QueueSkeleton";
@@ -211,6 +212,9 @@ export default function DoctorQueuePage() {
         queueStatus={queue?.status}
       />
 
+      {/* One-tap "running late" notification to everyone waiting */}
+      <DelayQuickNotify doctorId={doctorId} clinicId={selectedClinicId} />
+
       {/* 2. Key Operational Metric Cards */}
       <QueueStatusCard queue={queue} />
 
@@ -220,6 +224,7 @@ export default function DoctorQueuePage() {
           <CurrentPatientCard
             currentPatientToken={currentPatientToken}
             currentTokenNumber={queue?.currentToken}
+            nextPatientToken={waitingTokens[0]}
           />
         </div>
         <div className="lg:col-span-2 flex flex-col">

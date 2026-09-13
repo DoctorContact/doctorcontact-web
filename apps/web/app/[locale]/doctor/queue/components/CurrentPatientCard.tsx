@@ -1,18 +1,22 @@
 "use client";
 
 import type { QueueToken } from "@doctor-contract/shared";
-import { User, Clock, Calendar, Stethoscope } from "lucide-react";
+import { User, Clock, Calendar, Stethoscope, ArrowRight } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { GradientCard } from "@/components/ui/GradientCard";
 
 interface CurrentPatientCardProps {
   currentPatientToken?: QueueToken;
   currentTokenNumber?: number;
+  nextPatientToken?: QueueToken; // NEW: first WAITING/CHECKED_IN token, so the
+  // person calling patients always knows who's coming up without scrolling
+  // down to the full queue list.
 }
 
 export function CurrentPatientCard({
   currentPatientToken,
   currentTokenNumber = 0,
+  nextPatientToken,
 }: CurrentPatientCardProps) {
   const t = useTranslations("DoctorQueue");
   const hasCurrentPatient =
@@ -115,6 +119,18 @@ export function CurrentPatientCard({
                   </div>
                 )}
               </div>
+            </div>
+          )}
+
+          {nextPatientToken && (
+            <div className="mt-3 flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 text-xs dark:bg-slate-800/60">
+              <span className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+                <ArrowRight className="h-3.5 w-3.5" />
+                Next up
+              </span>
+              <span className="font-bold text-slate-800 dark:text-white">
+                {formatTokenDisplay(nextPatientToken.token)} · {nextPatientToken.patientName || "Patient"}
+              </span>
             </div>
           )}
         </div>

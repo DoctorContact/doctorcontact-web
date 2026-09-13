@@ -13,6 +13,7 @@ import { QueueStatusCard } from "../../../../doctor/queue/components/QueueStatus
 import { CurrentPatientCard } from "../../../../doctor/queue/components/CurrentPatientCard";
 import { QueueActions } from "../../../../doctor/queue/components/QueueActions";
 import { QuickQueueControl } from "../../../../doctor/queue/components/QuickQueueControl";
+import { DelayQuickNotify } from "../../../../doctor/queue/components/DelayQuickNotify";
 import { SessionSelector } from "../../../../doctor/queue/components/SessionSelector";
 import { QueueList } from "../../../../doctor/queue/components/QueueList";
 import { QueueSkeleton } from "../../../../doctor/queue/components/QueueSkeleton";
@@ -135,6 +136,9 @@ export default function ReceptionistDoctorQueuePage() {
         queueStatus={queue?.status}
       />
 
+      {/* One-tap "running late" notification to everyone waiting */}
+      <DelayQuickNotify doctorId={doctorId} clinicId={clinicId} />
+
       <QueueStatusCard queue={queue} />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -142,6 +146,7 @@ export default function ReceptionistDoctorQueuePage() {
           <CurrentPatientCard
             currentPatientToken={currentPatientToken}
             currentTokenNumber={queue?.currentToken}
+            nextPatientToken={waitingTokens[0]}
           />
         </div>
         <div className="flex flex-col lg:col-span-2">
