@@ -81,7 +81,7 @@ export default function ClinicFollowupsPage() {
     }
     setLookingUp(true);
     try {
-      const res = await api.get(`/patient/search-by-phone?phone=${phone.trim()}`);
+      const res = await api.get(`/patient/search`, { params: { phone: phone.trim() } });
       const p = res.data?.data?.patient;
       if (p?.id) {
         setPatient({ id: p.id, name: p.name ?? "Patient" });

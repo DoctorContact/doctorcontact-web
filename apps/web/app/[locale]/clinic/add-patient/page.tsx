@@ -9,8 +9,7 @@ import {
   Award,
   Stethoscope,
   ArrowRight,
-  Clock,
-  Calendar
+  Clock
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 
@@ -45,6 +44,26 @@ function getTodayLocal() {
   return new Date(Date.now() - tzOffset).toISOString().split("T")[0];
 }
 
+// Formats a "YYYY-MM-DD" into the "Today" / "13 Sep" label the date-strip
+// shows — same formatting the patient-facing booking modal uses, so the
+// clinic sees dates the exact same way patients do.
+function formatDateStripLabel(dateStr: string) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
+  const today = new Date();
+  const isToday =
+    dt.getFullYear() === today.getFullYear() &&
+    dt.getMonth() === today.getMonth() &&
+    dt.getDate() === today.getDate();
+  if (isToday) return { top: "Today", bottom: dt.toLocaleDateString("en-US", { day: "numeric", month: "short" }) };
+  return {
+    top: dt.toLocaleDateString("en-US", { weekday: "short" }),
+    bottom: dt.toLocaleDateString("en-US", { day: "numeric", month: "short" }),
+  };
+}
+
+type AvailableDateEntry = { date: string; sessions: any[] };
+
 // ============================================================
 // PAGE COMPONENT
 // ============================================================
@@ -64,10 +83,16 @@ export default function ClinicAddPatientPage() {
   const [isExistingPatient, setIsExistingPatient] = useState(false);
 
   // Schedule & Date States
-  const [date, setDate] = useState(getTodayLocal()); // 🟢 FIXED: Uses strictly local timezone date
+  const [date, setDate] = useState(""); // set once real available dates load — see below
   const [schedules, setSchedules] = useState<any[]>([]);
   const [selectedScheduleId, setSelectedScheduleId] = useState("");
   const [isFetchingSchedules, setIsFetchingSchedules] = useState(false);
+
+  // Date strip — same "only real, actually-bookable dates" list the patient
+  // booking modal uses, instead of a blind calendar the clinic has to
+  // manually click through date-by-date to find a day with sessions.
+  const [availableDates, setAvailableDates] = useState<AvailableDateEntry[]>([]);
+  const [isFetchingDates, setIsFetchingDates] = useState(false);
 
   // ============================================================
   // FETCH CLINIC DOCTORS
@@ -120,6 +145,42 @@ export default function ClinicAddPatientPage() {
   }, [selectedDoctor, clinic?.id, date]);
 
   // ============================================================
+  // FETCH AVAILABLE DATES (fast date-strip, same as patient booking flow)
+  // ============================================================
+
+  useEffect(() => {
+    async function fetchAvailableDates() {
+      if (!selectedDoctor || !clinic?.id) return;
+
+      setIsFetchingDates(true);
+      setAvailableDates([]);
+      setDate("");
+      setSchedules([]);
+      setSelectedScheduleId("");
+
+      try {
+        const response = await api.get(
+          `/doctors/${selectedDoctor.id}/clinics/${clinic.id}/schedules/available-dates?limit=10`
+        );
+        if (response.data?.success) {
+          const dates: AvailableDateEntry[] = response.data.data.dates || [];
+          setAvailableDates(dates);
+          // Auto-select the very next available date so the clinic sees
+          // sessions immediately instead of guessing which date to pick.
+          if (dates.length > 0) setDate(dates[0].date);
+        }
+      } catch (error) {
+        setAvailableDates([]);
+        toast.error("Failed to load available dates.");
+      } finally {
+        setIsFetchingDates(false);
+      }
+    }
+
+    fetchAvailableDates();
+  }, [selectedDoctor, clinic?.id]);
+
+  // ============================================================
   // PHONE CHECK (AUTO-FILL EXISTING PATIENT)
   // ============================================================
 
@@ -136,14 +197,13 @@ export default function ClinicAddPatientPage() {
 
     setIsCheckingPhone(true);
     try {
-      const response = await api.get(`/patient/search-by-phone?phone=${value}`);
+      const response = await api.get(`/patient/search`, { params: { phone: value } });
       const patient = response.data?.data?.patient;
 
       if (patient) {
         setPatientId(patient.id);
         setName(patient?.name || "");
-        const patientAge = patient?.patientProfile?.age ?? patient?.age ?? "";
-        setAge(patientAge !== "" ? String(patientAge) : "");
+        setAge(patient?.age != null ? String(patient.age) : "");
         setIsExistingPatient(true);
         toast.success("Existing patient found. You can edit the name if needed.");
       } else {
@@ -191,7 +251,7 @@ export default function ClinicAddPatientPage() {
         payload.newPatient = {
           name,
           phone,
-          age: Number(age)
+          age: age ? Number(age) : undefined,
         };
       }
 
@@ -264,19 +324,44 @@ export default function ClinicAddPatientPage() {
 
               <div className="space-y-5 p-5 sm:p-6">
                 
-                {/* 🟢 DATE SELECTOR */}
+                {/* 🟢 DATE STRIP — only real, actually-bookable dates ever appear here (same as the patient booking flow), so there's no guessing */}
                 <div>
                   <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">Appointment Date</label>
-                  <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3.5 focus-within:border-[#252a67] dark:bg-slate-800 dark:border-slate-700">
-                    <Calendar className="h-5 w-5 text-slate-400" />
-                    <input 
-                      type="date" 
-                      value={date} 
-                      onChange={(e) => setDate(e.target.value)} 
-                      min={getTodayLocal()} // 🟢 FIXED TIMEZONE
-                      className="w-full bg-transparent text-sm font-bold text-slate-900 outline-none dark:text-white" 
-                    />
-                  </div>
+                  {isFetchingDates ? (
+                    <div className="flex items-center gap-2 rounded-xl border border-dashed border-slate-200 p-3 text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400">
+                      <Loader2 className="h-4 w-4 animate-spin" /> Finding next available dates...
+                    </div>
+                  ) : availableDates.length === 0 ? (
+                    <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-bold text-red-500 dark:border-red-900/50 dark:bg-red-900/20">
+                      No upcoming availability found for this doctor at this clinic.
+                    </div>
+                  ) : (
+                    <div className="flex gap-2 overflow-x-auto pb-1">
+                      {availableDates.map((entry) => {
+                        const isSelected = date === entry.date;
+                        const label = formatDateStripLabel(entry.date);
+                        return (
+                          <button
+                            key={entry.date}
+                            type="button"
+                            onClick={() => setDate(entry.date)}
+                            className={`flex shrink-0 flex-col items-center rounded-xl border-2 px-4 py-2.5 transition-all ${
+                              isSelected
+                                ? "border-[#252a67] bg-[#252a67]/5 dark:border-teal-500 dark:bg-teal-500/10"
+                                : "border-slate-200 hover:border-[#252a67]/30 dark:border-slate-700 dark:hover:border-teal-500/40"
+                            }`}
+                          >
+                            <span className={`text-[10px] font-bold uppercase tracking-wide ${isSelected ? "text-[#252a67] dark:text-teal-400" : "text-slate-400"}`}>
+                              {label.top}
+                            </span>
+                            <span className={`mt-0.5 text-sm font-bold ${isSelected ? "text-[#252a67] dark:text-teal-400" : "text-slate-700 dark:text-slate-300"}`}>
+                              {label.bottom}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
 
                 {/* 🟢 SESSION SELECTOR */}
