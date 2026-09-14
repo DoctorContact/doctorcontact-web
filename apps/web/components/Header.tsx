@@ -187,7 +187,7 @@ export default function Header() {
   {/* Logo image instead of DoctorContact text */}
   <div className="flex items-center">
    <Image
-  src="/logo.png"
+  src="/LOGO.png"
   alt="Doctor Contact"
   width={130}
   height={36}
