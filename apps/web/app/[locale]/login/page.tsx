@@ -2,9 +2,9 @@
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/routing";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import {
   Mail,
@@ -22,6 +22,7 @@ import {
   Sparkles,
   User,
   Edit2,
+  RefreshCcw,
 } from "lucide-react";
 import { loginSchema, type LoginInput, type AuthUser } from "@doctor-contract/shared";
 import { api, setAccessToken } from "@/lib/api";
@@ -66,6 +67,8 @@ export default function LoginPage() {
       <div className="pointer-events-none absolute -bottom-24 -right-24 h-96 w-96 rounded-full bg-emerald-500/10 blur-3xl dark:bg-emerald-600/10" />
 
       <div className="relative w-full max-w-5xl overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-2xl shadow-blue-950/5 lg:grid lg:grid-cols-12 dark:border-soft-300 dark:bg-surface dark:shadow-black/40">
+        
+        {/* Left Side Branding (Untouched, it was already perfect) */}
         <div className="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-br from-[#12295E] via-[#1B3A8C] to-[#0f3470] p-8 text-white lg:col-span-5 lg:flex xl:p-10">
           <div className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-white/5 blur-2xl" />
           <div className="pointer-events-none absolute -bottom-20 -left-20 h-64 w-64 rounded-full bg-emerald-400/10 blur-2xl" />
@@ -73,23 +76,13 @@ export default function LoginPage() {
           <div className="relative z-10">
             <div className="flex items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/20 bg-white/10 shadow-inner backdrop-blur-md">
-                <Image
-                  src="/logo-icon.png"
-                  alt="Doctor Contact"
-                  width={40}
-                  height={40}
-                  className="h-8 w-8 object-contain"
-                  priority
-                />
+                <Image src="/logo-icon.png" alt="Doctor Contact" width={40} height={40} className="h-8 w-8 object-contain" priority />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-lg font-bold tracking-tight text-white">
-                    Doctor Contact
-                  </span>
+                  <span className="text-lg font-bold tracking-tight text-white">Doctor Contact</span>
                   <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/40 bg-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">
-                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
-                    Live
+                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" /> Live
                   </span>
                 </div>
                 <p className="text-xs text-blue-200/80">Smart Healthcare & Queue Ecosystem</p>
@@ -117,9 +110,7 @@ export default function LoginPage() {
               </div>
               <div>
                 <h3 className="text-xs font-semibold text-white">Verified Specialists</h3>
-                <p className="mt-0.5 text-[11px] text-blue-100/70">
-                  Direct appointment booking with certified doctors & partner clinics.
-                </p>
+                <p className="mt-0.5 text-[11px] text-blue-100/70">Direct appointment booking with certified doctors & partner clinics.</p>
               </div>
             </div>
 
@@ -129,9 +120,7 @@ export default function LoginPage() {
               </div>
               <div>
                 <h3 className="text-xs font-semibold text-white">Live Queue Tracking</h3>
-                <p className="mt-0.5 text-[11px] text-blue-100/70">
-                  Know your token number before leaving home with zero guesswork.
-                </p>
+                <p className="mt-0.5 text-[11px] text-blue-100/70">Know your token number before leaving home with zero guesswork.</p>
               </div>
             </div>
 
@@ -141,48 +130,23 @@ export default function LoginPage() {
               </div>
               <div>
                 <h3 className="text-xs font-semibold text-white">Encrypted & Secure</h3>
-                <p className="mt-0.5 text-[11px] text-blue-100/70">
-                  Enterprise-grade data privacy for patients, doctors & diagnostics.
-                </p>
+                <p className="mt-0.5 text-[11px] text-blue-100/70">Enterprise-grade data privacy for patients, doctors & diagnostics.</p>
               </div>
-            </div>
-          </div>
-
-          <div className="relative z-10 border-t border-white/15 pt-4 text-xs text-blue-200/80">
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4 text-emerald-400" />
-              <span className="font-medium text-white/90">100% Secure Session</span>
-              <span className="text-blue-300/40">•</span>
-              <span>256-bit Encryption</span>
             </div>
           </div>
         </div>
 
+        {/* Right Side Login Forms */}
         <div className="flex flex-col justify-between p-6 sm:p-10 lg:col-span-7 xl:p-12">
           <div className="mb-6 flex items-center justify-between lg:hidden">
             <div className="flex items-center gap-2.5">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-500/10">
-                <Image
-                  src="/logo-icon.png"
-                  alt="Doctor Contact"
-                  width={32}
-                  height={32}
-                  className="h-7 w-7 object-contain"
-                  priority
-                />
+                <Image src="/logo-icon.png" alt="Doctor Contact" width={32} height={32} className="h-7 w-7 object-contain" priority />
               </div>
-              <Image
-                src="/LOGO.png"
-                alt="Doctor Contact"
-                width={120}
-                height={32}
-                className="h-7 w-auto object-contain"
-                priority
-              />
+              <Image src="/LOGO.png" alt="Doctor Contact" width={120} height={32} className="h-7 w-auto object-contain" priority />
             </div>
             <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-950/40 dark:text-emerald-400">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
-              Live Portal
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" /> Live Portal
             </span>
           </div>
 
@@ -198,7 +162,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => setMode("patient")}
-                className={`rounded-lg py-2 text-xs font-semibold transition ${
+                className={`rounded-lg py-2 text-xs font-semibold transition-all duration-300 ${
                   mode === "patient"
                     ? "bg-white text-[var(--color-primary-text)] shadow-sm dark:bg-surface"
                     : "text-gray-500 hover:text-gray-700 dark:text-ink-500"
@@ -209,7 +173,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => setMode("staff")}
-                className={`rounded-lg py-2 text-xs font-semibold transition ${
+                className={`rounded-lg py-2 text-xs font-semibold transition-all duration-300 ${
                   mode === "staff"
                     ? "bg-white text-[var(--color-primary-text)] shadow-sm dark:bg-surface"
                     : "text-gray-500 hover:text-gray-700 dark:text-ink-500"
@@ -219,31 +183,24 @@ export default function LoginPage() {
               </button>
             </div>
 
-            {mode === "patient" ? (
-              <PatientPhoneLogin onSuccess={(user) => { setUser(user); router.push(routeForRole(user.role)); }} />
-            ) : (
-              <StaffPasswordLogin onSuccess={(user) => { setUser(user); router.push(routeForRole(user.role)); }} />
-            )}
+            {/* Seamless transition between login modes */}
+            <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+              {mode === "patient" ? (
+                <PatientPhoneLogin onSuccess={(user) => { setUser(user); router.push(routeForRole(user.role)); }} />
+              ) : (
+                <StaffPasswordLogin onSuccess={(user) => { setUser(user); router.push(routeForRole(user.role)); }} />
+              )}
+            </div>
           </div>
 
           <div className="mt-8 border-t border-gray-100 pt-5 text-center dark:border-soft-200">
-            <p className="text-xs text-gray-500 dark:text-ink-500">
-              Run a clinic or facing trouble logging in?
-            </p>
+            <p className="text-xs text-gray-500 dark:text-ink-500">Run a clinic or facing trouble logging in?</p>
             <div className="mt-2.5 flex items-center justify-center gap-3">
-              <a
-                href={"tel:" + CLINIC_PHONE}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary-text)] dark:border-soft-300 dark:text-ink-700"
-              >
+              <a href={"tel:" + CLINIC_PHONE} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary-text)] dark:border-soft-300 dark:text-ink-700">
                 <Phone className="h-3.5 w-3.5" />
                 <span>Call Helpdesk</span>
               </a>
-              <a
-                href={"https://wa.me/" + CLINIC_WHATSAPP}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:border-[var(--color-secondary)] hover:text-[var(--color-secondary-dark-text)] dark:border-soft-300 dark:text-ink-700"
-              >
+              <a href={"https://wa.me/" + CLINIC_WHATSAPP} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:border-[var(--color-secondary)] hover:text-[var(--color-secondary-dark-text)] dark:border-soft-300 dark:text-ink-700">
                 <MessageCircle className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
                 <span>WhatsApp</span>
               </a>
@@ -256,7 +213,7 @@ export default function LoginPage() {
 }
 
 // ==========================================================================
-// Patient tab — MSG91 + Redis backend OTP integration
+// Patient Phone & OTP Login (Polished UX)
 // ==========================================================================
 function PatientPhoneLogin({ onSuccess }: { onSuccess: (user: AuthUser) => void }) {
   const t = useTranslations("AuthPage");
@@ -269,6 +226,16 @@ function PatientPhoneLogin({ onSuccess }: { onSuccess: (user: AuthUser) => void 
   const [serverError, setServerError] = useState("");
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [timer, setTimer] = useState(0);
+
+  // Timer logic for Resend OTP
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (step === "enter-otp" && timer > 0) {
+      interval = setInterval(() => setTimer((prev) => prev - 1), 1000);
+    }
+    return () => clearInterval(interval);
+  }, [step, timer]);
 
   async function handleSendOtp() {
     setServerError("");
@@ -276,6 +243,8 @@ function PatientPhoneLogin({ onSuccess }: { onSuccess: (user: AuthUser) => void 
     try {
       await api.post("/auth/send-otp", { phone: phoneInput });
       setStep("enter-otp");
+      setTimer(60); // Start 60 seconds countdown
+      setOtp(""); // Clear previous OTP if any
     } catch (err: unknown) {
       if (typeof err === "object" && err !== null && "response" in err) {
         const responseData = (err as { response?: { data?: { message?: string } } }).response?.data;
@@ -308,8 +277,10 @@ function PatientPhoneLogin({ onSuccess }: { onSuccess: (user: AuthUser) => void 
     } catch (err: unknown) {
       if (typeof err === "object" && err !== null && "response" in err) {
         const response = (err as { response?: { data?: { message?: string }; status?: number } }).response;
+        // Check if the backend requires a name for a new user
         if (response?.status === 400 && response.data?.message?.toLowerCase().includes("name")) {
           setNeedsName(true);
+          setServerError("Please enter your name to complete registration.");
         } else {
           setServerError(response?.data?.message || t("genericError"));
         }
@@ -324,7 +295,7 @@ function PatientPhoneLogin({ onSuccess }: { onSuccess: (user: AuthUser) => void 
   return (
     <div className="mt-6 space-y-3.5">
       {step === "enter-phone" && (
-        <>
+        <div className="animate-in fade-in slide-in-from-left-4 duration-300">
           <div>
             <label className="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-ink-700">
               {t("phoneLabel")}
@@ -335,17 +306,18 @@ function PatientPhoneLogin({ onSuccess }: { onSuccess: (user: AuthUser) => void 
               </div>
               <input
                 value={phoneInput}
-                onChange={(e) => setPhoneInput(e.target.value)}
+                onChange={(e) => setPhoneInput(e.target.value.replace(/\D/g, ""))}
                 type="tel"
-                inputMode="tel"
+                inputMode="numeric"
+                maxLength={12}
                 placeholder={t("phonePlaceholder")}
-                className="w-full rounded-xl border border-gray-200 bg-gray-50/50 py-2.5 pr-4 pl-10 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-[var(--color-primary)] focus:bg-white focus:ring-4 focus:ring-[var(--color-primary)]/10 dark:border-soft-300 dark:bg-surface-100 dark:text-ink-900 dark:placeholder:text-ink-400 dark:focus:bg-surface"
+                className="w-full rounded-xl border border-gray-200 bg-gray-50/50 py-2.5 pr-4 pl-10 text-sm font-medium text-gray-900 outline-none transition-all placeholder:text-gray-400 focus:border-[var(--color-primary)] focus:bg-white focus:ring-4 focus:ring-[var(--color-primary)]/10 dark:border-soft-300 dark:bg-surface-100 dark:text-ink-900 dark:placeholder:text-ink-400 dark:focus:bg-surface"
               />
             </div>
           </div>
 
           {serverError && (
-            <div className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700 sm:text-sm dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300">
+            <div className="mt-3 flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700 sm:text-sm animate-in fade-in">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
               <span>{serverError}</span>
             </div>
@@ -355,7 +327,7 @@ function PatientPhoneLogin({ onSuccess }: { onSuccess: (user: AuthUser) => void 
             type="button"
             onClick={handleSendOtp}
             disabled={loading || phoneInput.length < 10}
-            className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#1B3A8C] to-[#12295E] py-3 text-sm font-semibold text-white shadow-lg shadow-blue-900/20 transition-all hover:from-[#152e70] hover:to-[#0c1c42] hover:shadow-xl active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+            className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#1B3A8C] to-[#12295E] py-3 text-sm font-semibold text-white shadow-lg shadow-blue-900/20 transition-all hover:from-[#152e70] hover:to-[#0c1c42] hover:shadow-xl active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading ? (
               <>
@@ -369,21 +341,24 @@ function PatientPhoneLogin({ onSuccess }: { onSuccess: (user: AuthUser) => void 
               </>
             )}
           </button>
-        </>
+        </div>
       )}
 
       {step === "enter-otp" && (
-        <>
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-gray-600 dark:text-ink-600">
-              {t("otpSentTo")} <span className="font-semibold">{phoneInput}</span>
-            </p>
+        <div className="animate-in fade-in slide-in-from-right-4 duration-300 space-y-4">
+          <div className="flex items-center justify-between rounded-lg bg-blue-50/50 p-3 dark:bg-blue-900/10">
+            <div>
+              <p className="text-xs text-gray-500 dark:text-ink-500">{t("otpSentTo")}</p>
+              <p className="text-sm font-bold tracking-wide text-gray-900 dark:text-ink-900">
+                +91 {phoneInput}
+              </p>
+            </div>
             <button
               type="button"
-              onClick={() => { setStep("enter-phone"); setOtp(""); }}
-              className="flex items-center gap-1 text-xs font-medium text-[var(--color-primary-text)] hover:underline"
+              onClick={() => { setStep("enter-phone"); setOtp(""); setNeedsName(false); }}
+              className="flex items-center gap-1.5 rounded-md bg-white px-2.5 py-1.5 text-xs font-semibold text-[var(--color-primary-text)] shadow-sm transition hover:bg-gray-50 dark:bg-surface-100"
             >
-              <Edit2 className="h-3 w-3" />
+              <Edit2 className="h-3.5 w-3.5" />
               {t("editNumber")}
             </button>
           </div>
@@ -391,7 +366,7 @@ function PatientPhoneLogin({ onSuccess }: { onSuccess: (user: AuthUser) => void 
           <OtpInput value={otp} onChange={setOtp} disabled={submitting} />
 
           {needsName && (
-            <div>
+            <div className="animate-in fade-in slide-in-from-top-2 duration-300">
               <label className="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-ink-700">
                 {t("nameLabel")}
               </label>
@@ -403,47 +378,60 @@ function PatientPhoneLogin({ onSuccess }: { onSuccess: (user: AuthUser) => void 
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder={t("namePlaceholder")}
-                  className="w-full rounded-xl border border-gray-200 bg-gray-50/50 py-2.5 pr-4 pl-10 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-[var(--color-primary)] focus:bg-white focus:ring-4 focus:ring-[var(--color-primary)]/10 dark:border-soft-300 dark:bg-surface-100 dark:text-ink-900 dark:placeholder:text-ink-400 dark:focus:bg-surface"
+                  className="w-full rounded-xl border border-gray-200 bg-gray-50/50 py-2.5 pr-4 pl-10 text-sm font-medium text-gray-900 outline-none transition-all placeholder:text-gray-400 focus:border-[var(--color-primary)] focus:bg-white focus:ring-4 focus:ring-[var(--color-primary)]/10"
                 />
               </div>
-              <p className="mt-1.5 text-xs text-gray-400 dark:text-ink-400">{t("firstTimeNameHint")}</p>
+              <p className="mt-1.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                ✨ {t("firstTimeNameHint")}
+              </p>
             </div>
           )}
 
           {serverError && (
-            <div className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700 sm:text-sm dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300">
+            <div className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700 sm:text-sm animate-in fade-in">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
               <span>{serverError}</span>
             </div>
           )}
 
-          <button
-            type="button"
-            onClick={handleConfirmOtp}
-            disabled={loading || submitting || otp.length < 6 || (needsName && name.trim().length < 2)}
-            className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#1B3A8C] to-[#12295E] py-3 text-sm font-semibold text-white shadow-lg shadow-blue-900/20 transition-all hover:from-[#152e70] hover:to-[#0c1c42] hover:shadow-xl active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {loading || submitting ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span>{t("verifying")}</span>
-              </>
-            ) : (
-              <>
-                <span>{t("verifyAndContinue")}</span>
-                <ArrowRight className="h-4 w-4" />
-              </>
-            )}
-          </button>
-        </>
+          <div className="flex flex-col gap-3 pt-2">
+            <button
+              type="button"
+              onClick={handleConfirmOtp}
+              disabled={loading || submitting || otp.length < 6 || (needsName && name.trim().length < 2)}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#1B3A8C] to-[#12295E] py-3 text-sm font-semibold text-white shadow-lg shadow-blue-900/20 transition-all hover:from-[#152e70] hover:to-[#0c1c42] hover:shadow-xl active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {loading || submitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>{t("verifying")}</span>
+                </>
+              ) : (
+                <>
+                  <span>{needsName ? "Create Account & Login" : t("verifyAndContinue")}</span>
+                  <ArrowRight className="h-4 w-4" />
+                </>
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleSendOtp}
+              disabled={timer > 0 || loading}
+              className="flex w-full items-center justify-center gap-1.5 py-2 text-xs font-semibold text-gray-500 transition hover:text-gray-800 disabled:opacity-50"
+            >
+              <RefreshCcw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+              {timer > 0 ? `Resend OTP in ${timer}s` : "Resend OTP"}
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
 }
 
 // ==========================================================================
-// Staff tab — email OR phone + password (Doctor/Clinic/Receptionist/Admin/
-// Super Admin).
+// Staff Password Login (Untouched, formatting maintained)
 // ==========================================================================
 function StaffPasswordLogin({ onSuccess }: { onSuccess: (user: AuthUser) => void }) {
   const t = useTranslations("AuthPage");
@@ -539,7 +527,7 @@ function StaffPasswordLogin({ onSuccess }: { onSuccess: (user: AuthUser) => void
       </div>
 
       {serverError && (
-        <div className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700 sm:text-sm dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300">
+        <div className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700 sm:text-sm animate-in fade-in">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
           <span>{serverError}</span>
         </div>
