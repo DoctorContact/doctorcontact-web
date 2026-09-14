@@ -237,7 +237,7 @@ export default function Header() {
 
           {/* Labs visible directly */}
           <Link
-            href="/#labs"
+            href="/labs"
             className="text-sm font-medium text-slate-700 hover:text-[#1C63E7] transition-colors dark:text-ink-700 dark:hover:text-[var(--color-primary-text)]"
           >
             Labs
@@ -273,7 +273,7 @@ export default function Header() {
             {showMoreMenu && (
               <div className="absolute left-0 mt-2 w-52 rounded-xl border border-slate-100 bg-white p-1.5 shadow-xl dark:border-soft-300 dark:bg-surface animate-in fade-in zoom-in-95 duration-100 z-50">
                 <Link
-                  href="/doctors/available"
+                  href="/doctors"
                   onClick={() => setShowMoreMenu(false)}
                   className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:text-ink-700"
                 >
@@ -433,7 +433,7 @@ export default function Header() {
                       {t("login")}
                     </Link>
                     <Link
-                      href="/register"
+                      href="/login"
                       onClick={() => setShowUserMenu(false)}
                       className="block w-full rounded-xl border border-slate-200 px-3 py-2 text-center text-xs font-bold text-slate-700 transition hover:bg-slate-50"
                     >
