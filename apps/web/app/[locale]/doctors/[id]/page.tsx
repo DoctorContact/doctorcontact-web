@@ -190,7 +190,17 @@ export default function DoctorProfilePage() {
           setSchedules(prev => prev.map(s => s.id === selectedScheduleId ? { ...s, slotsLeft: s.slotsLeft - 1, currentBookings: s.currentBookings + 1 } : s));
           setTimeout(() => setIsModalOpen(false), 3000);
         },
-        onError: (err) => setMessage({ type: "error", text: err.message || "Failed to book appointment" }),
+        onError: (err: any) => {
+  const errorMessage =
+    err?.response?.data?.message ||
+    err?.message ||
+    "Failed to book appointment";
+
+  setMessage({
+    type: "error",
+    text: errorMessage,
+  });
+},
       }
     );
   };
