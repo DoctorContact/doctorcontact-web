@@ -2,7 +2,7 @@
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { useState, useEffect } from "react";
 import { Link } from "@/i18n/routing";
 import { useQueryClient } from "@tanstack/react-query";
@@ -17,10 +17,9 @@ import {
   Save,
   Loader2,
   CheckCircle2,
-  Sparkles,
   Shield,
   Activity,
-  Building2,
+  Edit3,
 } from "lucide-react";
 import { updateProfileSchema, type UpdateProfileInput } from "@doctor-contract/shared";
 import { api } from "@/lib/api";
@@ -30,7 +29,6 @@ import { useMyPatientProfile } from "@/lib/hooks/useAppointments";
 // ============================================================
 // GRADIENT BORDER CARD COMPONENT
 // ============================================================
-
 function GradientCard({
   children,
   className = "",
@@ -56,13 +54,14 @@ function toDateInputValue(iso: string | null | undefined) {
 
 export default function ProfilePage() {
   const t = useTranslations("Dashboard");
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
   const { data: patient, isLoading } = useMyPatientProfile();
   const queryClient = useQueryClient();
 
   const [serverError, setServerError] = useState("");
   const [success, setSuccess] = useState(false);
 
+  // 🟢 সরাসরি Shared Schema ব্যবহার করা হচ্ছে
   const {
     register,
     handleSubmit,
@@ -71,21 +70,23 @@ export default function ProfilePage() {
   } = useForm<UpdateProfileInput>({ resolver: zodResolver(updateProfileSchema) });
 
   useEffect(() => {
-    if (patient) {
+    if (patient && user) {
       reset({
+        name: user.name || "", // 🟢 TypeScript Error ফিক্স: patient.name বাদ দিয়ে শুধু user.name ব্যবহার করা হলো
         dob: toDateInputValue(patient.dob),
         gender: patient.gender ?? undefined,
         bloodGroup: patient.bloodGroup ?? "",
         address: patient.address ?? "",
       });
     }
-  }, [patient, reset]);
+  }, [patient, user, reset]);
 
   async function onSubmit(values: UpdateProfileInput) {
     setServerError("");
     setSuccess(false);
     try {
       const payload: Record<string, unknown> = { ...values };
+      
       if (values.dob) {
         payload.dob = new Date(values.dob).toISOString();
       } else {
@@ -93,9 +94,20 @@ export default function ProfilePage() {
       }
       if (!values.gender) delete payload.gender;
 
+      // ১. ব্যাকএন্ডের /patient/me তে রিকোয়েস্ট পাঠানো
       await api.patch("/patient/me", payload);
+
+      // ২. UI-তে ইনস্ট্যান্ট নাম আপডেট করার জন্য Local State ও LocalStorage আপডেট
+      if (values.name && values.name !== user?.name) {
+        const updatedUser = { ...user, name: values.name };
+        // @ts-ignore
+        setUser(updatedUser);
+        localStorage.setItem("user", JSON.stringify(updatedUser));
+      }
+
       setSuccess(true);
       queryClient.invalidateQueries({ queryKey: ["patient", "me"] });
+      
     } catch (err: any) {
       setServerError(err?.response?.data?.message || "Something went wrong");
     }
@@ -103,9 +115,6 @@ export default function ProfilePage() {
 
   return (
     <div className="mx-auto max-w-xl space-y-6">
-      {/* =====================================================
-          BACK LINK
-      ====================================================== */}
       <Link
         href="/patient"
         className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-[#1e40af] transition-colors"
@@ -114,9 +123,6 @@ export default function ProfilePage() {
         {t("backToDashboard")}
       </Link>
 
-      {/* =====================================================
-          PAGE HEADER - Gradient Border
-      ====================================================== */}
       <GradientCard gradient="from-[#1e3a8a] via-[#3b82f6] to-[#60a5fa]">
         <div className="p-5">
           <div className="flex items-center gap-2 mb-2">
@@ -141,9 +147,6 @@ export default function ProfilePage() {
         </div>
       </GradientCard>
 
-      {/* =====================================================
-          PROFILE INFO CARD
-      ====================================================== */}
       <GradientCard gradient="from-[#667eea] via-[#764ba2] to-[#f093fb]">
         <div className="p-5">
           <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -151,7 +154,7 @@ export default function ProfilePage() {
               <div className="relative">
                 <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[#1e3a8a] to-[#3b82f6] text-white shadow-lg shadow-blue-500/30">
                   <span className="text-xl font-bold">
-                    {user?.name?.charAt(0) || "U"}
+                    {user?.name?.charAt(0)?.toUpperCase() || "U"}
                   </span>
                 </div>
                 <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-r from-[#059669] to-[#10b981] text-white shadow-md shadow-green-500/30">
@@ -163,7 +166,7 @@ export default function ProfilePage() {
                 <h2 className="text-lg font-bold text-slate-900">{user?.name}</h2>
                 <p className="mt-1 flex items-center justify-center gap-1.5 text-sm text-slate-500 sm:justify-start">
                   <Mail className="h-4 w-4 text-[#1e40af]" />
-                  {user?.email}
+                  {user?.email || "No email added"}
                 </p>
               </div>
             </div>
@@ -176,7 +179,7 @@ export default function ProfilePage() {
               </div>
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Phone</p>
-                <p className="text-sm font-semibold text-slate-800">{user?.phone || "Not set"}</p>
+                <p className="text-sm font-semibold text-slate-800">+91 {user?.phone || "Not set"}</p>
               </div>
             </div>
 
@@ -193,9 +196,6 @@ export default function ProfilePage() {
         </div>
       </GradientCard>
 
-      {/* =====================================================
-          EDIT FORM - Gradient Border
-      ====================================================== */}
       {isLoading ? (
         <div className="flex min-h-[200px] items-center justify-center rounded-3xl border border-slate-100 bg-slate-50/50">
           <div className="flex flex-col items-center gap-3">
@@ -209,7 +209,7 @@ export default function ProfilePage() {
             <div className="mb-6">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-r from-[#059669] to-[#10b981] text-white shadow-lg shadow-green-500/30">
-                  <Save className="h-5 w-5" />
+                  <Edit3 className="h-5 w-5" />
                 </div>
                 <div>
                   <h2 className="text-base font-bold text-slate-800">Personal Information</h2>
@@ -219,6 +219,21 @@ export default function ProfilePage() {
             </div>
 
             <div className="space-y-4">
+              {/* 🟢 Full Name Input */}
+              <div>
+                <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-600">
+                  Full Name
+                </label>
+                <div className="relative">
+                  <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <input
+                    {...register("name")}
+                    placeholder="e.g. John Doe"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-2.5 pl-10 pr-3 text-sm text-slate-800 outline-none transition-all hover:border-[#1e40af]/30 focus:border-[#1e40af] focus:bg-white focus:ring-[3px] focus:ring-[#1e40af]/10"
+                  />
+                </div>
+              </div>
+
               {/* DOB */}
               <div>
                 <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-600">
