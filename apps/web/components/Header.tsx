@@ -199,7 +199,7 @@ export default function Header() {
     object-contain
     sm:h-9
     sm:max-w-[145px]
-  "
+  " 
 />
   </div>
 </Link>
