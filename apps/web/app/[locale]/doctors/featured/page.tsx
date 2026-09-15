@@ -1,340 +1,920 @@
 "use client";
 
 import { useState } from "react";
-import { useLocale, useTranslations } from "next-intl";
-import { Calendar, Star, Heart, Clock, BadgeCheck, Stethoscope, Award, Loader2, CalendarCheck, Building2, Sparkles } from "lucide-react";
-import { useAuth } from "@/lib/auth-context";
-import { useRouter, Link } from "@/i18n/routing";
-import { usePublicFeaturedDoctors } from "@/lib/hooks/usePublicDirectory"; // Hook for featured doctors
-import { useBookAppointment } from "@/lib/hooks/useDoctorSearch";
+import { useTranslations } from "next-intl";
+import {
+  Star,
+  Heart,
+  BadgeCheck,
+  Stethoscope,
+  Award,
+  CalendarCheck,
+  Sparkles,
+  MapPin,
+} from "lucide-react";
 import { ExtendedDoctor } from "@/types/doctor";
 import DoctorClinicInfo from "@/components/DoctorClinicInfo";
+import { usePublicFeaturedDoctors } from "@/lib/hooks/usePublicDirectory";
+import { Link } from "@/i18n/routing";
+
+/* =========================================================
+   HELPERS
+========================================================= */
 
 function initials(name: string) {
-  return name.split(" ").filter(Boolean).map((part) => part[0]).slice(0, 2).join("").toUpperCase();
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => part[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
 }
 
-function GradientBorderCard({ children, className }: { children: React.ReactNode; className?: string }) {
-  return (
-    <div className={`relative rounded-[24px] p-[3px] bg-gradient-to-br from-[#2563EB] via-[#0F766E] to-[#14B8A6] shadow-[0_4px_20px_rgba(0,0,0,0.06)] transition-all duration-300 hover:shadow-[0_8px_30px_rgba(37,99,235,0.12)] ${className}`}>
-      <div className="rounded-[calc(24px-2.5px)] bg-white dark:bg-slate-900 h-full">
-        {children}
-      </div>
-    </div>
-  );
-}
+/* =========================================================
+   EXPERIENCE BADGE
+========================================================= */
 
 function ExperienceBadge({ years }: { years: number }) {
   if (!years || years <= 0) return null;
+
   return (
-    <div className="absolute bottom-1.5 left-1.5 z-10">
-      <div className="flex items-center gap-1 rounded-full border border-white/80 bg-[#252a67]/95 px-2 py-0.5 shadow-sm backdrop-blur-sm">
-        <Award className="h-2.5 w-2.5 text-amber-300" strokeWidth={2.5} />
-        <span className="whitespace-nowrap text-[9px] font-bold tracking-wide text-white">
-          {years}+ yrs
+    <div className="absolute bottom-3 left-3 z-20">
+      <div
+        className="
+          flex items-center gap-1.5
+          rounded-full
+          border border-white/20
+          bg-slate-950/80
+          px-2.5 py-1.5
+          shadow-lg
+          backdrop-blur-xl
+        "
+      >
+        <Award
+          className="h-3.5 w-3.5 text-amber-300"
+          strokeWidth={2.5}
+        />
+
+        <span className="text-[10px] font-bold tracking-wide text-white">
+          {years}+ yrs experience
         </span>
       </div>
     </div>
   );
 }
 
+/* =========================================================
+   VERIFIED BADGE
+========================================================= */
+
+function VerifiedBadge() {
+  return (
+    <div
+      className="
+        absolute right-3 top-3 z-20
+        flex h-8 w-8
+        items-center justify-center
+        rounded-full
+        border border-white/70
+        bg-white/95
+        shadow-[0_5px_18px_rgba(15,23,42,0.18)]
+        backdrop-blur-xl
+        dark:border-slate-700
+        dark:bg-slate-900/95
+      "
+      title="Verified Doctor"
+    >
+      <BadgeCheck
+        className="h-4.5 w-4.5 text-blue-600"
+        strokeWidth={2.5}
+      />
+    </div>
+  );
+}
+
+/* =========================================================
+   DOCTOR CARD
+========================================================= */
+
 function DoctorCard({ doctor }: { doctor: ExtendedDoctor }) {
   const t = useTranslations("DoctorSearch");
-const locale = useLocale();
-  const { user } = useAuth();
-  const router = useRouter();
 
-  const [showBooking, setShowBooking] = useState(false);
-  const [date, setDate] = useState("");
-  const [time, setTime] = useState("");
-  
-  const defaultClinicId = doctor.allClinics?.[0]?.id || (doctor as any).clinicId;
-  const [selectedClinicId, setSelectedClinicId] = useState(defaultClinicId);
   const [isFavorite, setIsFavorite] = useState(false);
-  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
-
-  const bookMutation = useBookAppointment();
-
-  function handleBookClick() {
-    if (!user) {
-      router.push(`/login?redirect=/doctors/featured`);
-      return;
-    }
-    setMessage(null);
-    setShowBooking((v) => !v);
-    if (!showBooking) {
-      setDate("");
-      setTime("");
-    }
-  }
-
-  function handleConfirmBooking() {
-    if (!date || !time) {
-      setMessage({ type: "error", text: t("pleaseSelectDateTime") || "Please select date and time" });
-      return;
-    }
-    const dateTime = new Date(`${date}T${time}`);
-    if (dateTime < new Date()) {
-      setMessage({ type: "error", text: t("pastDateError") || "Please select a future date and time" });
-      return;
-    }
-    
-    bookMutation.mutate(
-      { doctorId: doctor.id, clinicId: selectedClinicId, scheduleId: (doctor as any).schedules?.[0]?.id || "", date: dateTime.toISOString() },
-      {
-        onSuccess: (appointment) => {
-          setMessage({ type: "success", text: `${t("bookSuccess")} #${appointment.token}` });
-          setDate("");
-          setTime("");
-          setTimeout(() => {
-            setShowBooking(false);
-            setMessage(null);
-          }, 5000);
-        },
-        onError: (error) => setMessage({ type: "error", text: error.message || t("bookError") }),
-      }
-    );
-  }
 
   const experienceYears = doctor.experience ?? 0;
   const rating = doctor.rating ?? 4.5;
   const reviews = doctor.reviewCount ?? 120;
   const isAvailable = doctor.isAvailable;
-  const avatarSrc = (doctor as any).profilePhoto || doctor.user?.avatar;
+
+  const avatarSrc =
+    (doctor as any).profilePhoto || doctor.user?.avatar;
 
   return (
-    <GradientBorderCard className="h-full">
-      <div className="flex h-full flex-col p-4 relative overflow-hidden">
-        <div className="pointer-events-none absolute -top-10 -right-10 h-20 w-20 rounded-full bg-gradient-to-br from-[#2563EB]/5 to-[#0F766E]/10 blur-2xl" />
+    <article
+      className="
+        group relative h-full
+        overflow-hidden
+        rounded-[26px]
+        border border-slate-200/80
+        bg-white
+        shadow-[0_8px_35px_rgba(15,23,42,0.055)]
+        transition-all duration-500
+        hover:-translate-y-1.5
+        hover:border-slate-300
+        hover:shadow-[0_22px_55px_rgba(37,42,103,0.13)]
+        dark:border-slate-800
+        dark:bg-slate-950
+        dark:hover:border-slate-700
+      "
+    >
+      {/* =====================================================
+          TOP GRADIENT ACCENT
+      ====================================================== */}
+      <div
+        className="
+          absolute inset-x-0 top-0 h-[3px]
+          bg-gradient-to-r
+          from-[#252a67]
+          via-[#4f63b5]
+          to-[#14B8A6]
+          opacity-90
+        "
+      />
 
-        <div className="relative mx-auto w-full max-w-[150px] sm:max-w-[150px] aspect-[3/4] overflow-hidden rounded-xl border-2 border-[#252a67]">
+      {/* =====================================================
+          SOFT BACKGROUND GLOW
+      ====================================================== */}
+      <div
+        className="
+          pointer-events-none
+          absolute -right-20 -top-20
+          h-48 w-48
+          rounded-full
+          bg-gradient-to-br
+          from-[#252a67]/[0.07]
+          via-blue-400/[0.04]
+          to-[#14B8A6]/[0.08]
+          blur-3xl
+        "
+      />
+
+      {/* =====================================================
+          DOCTOR PHOTO
+      ====================================================== */}
+      <div className="relative px-4 pt-4 sm:px-5 sm:pt-5">
+        <div
+          className="
+            relative mx-auto
+            aspect-[4/4.8]
+            w-full
+            max-w-[190px]
+            overflow-hidden
+            rounded-[20px]
+            bg-slate-100
+            ring-1 ring-slate-200/80
+            shadow-[0_12px_35px_rgba(15,23,42,0.10)]
+            dark:bg-slate-900
+            dark:ring-slate-800
+          "
+        >
           {avatarSrc ? (
-            <img src={avatarSrc} alt={doctor.user.name} className="h-full w-full object-cover" />
+            <img
+              src={avatarSrc}
+              alt={doctor.user.name}
+              className="
+                h-full w-full
+                object-cover
+                transition-transform
+                duration-700
+                ease-out
+                group-hover:scale-[1.035]
+              "
+            />
           ) : (
-            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#2563EB] to-[#6a7583] text-2xl font-bold text-white">
+            <div
+              className="
+                flex h-full w-full
+                items-center justify-center
+                bg-gradient-to-br
+                from-[#252a67]
+                via-[#3b4a8f]
+                to-[#14B8A6]
+                text-4xl
+                font-extrabold
+                text-white
+              "
+            >
               {initials(doctor.user.name)}
             </div>
           )}
+
+          {/* Bottom image gradient */}
+          <div
+            className="
+              pointer-events-none
+              absolute inset-x-0 bottom-0
+              h-28
+              bg-gradient-to-t
+              from-black/30
+              via-black/5
+              to-transparent
+            "
+          />
+
+          {/* Experience */}
           <ExperienceBadge years={experienceYears} />
-          <BadgeCheck className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full bg-white text-[#2563EB] shadow-sm ring-1 ring-white dark:bg-slate-800 dark:ring-slate-700" />
+
+          {/* Verified */}
+          <VerifiedBadge />
+
+          {/* Favorite */}
           <button
             type="button"
-            onClick={() => setIsFavorite(!isFavorite)}
-            className="absolute right-1.5 top-1.5 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-white/90 text-slate-400 shadow-sm backdrop-blur-sm transition-all hover:scale-105 hover:text-red-500 active:scale-95"
+            aria-label={
+              isFavorite
+                ? "Remove from favorites"
+                : "Add to favorites"
+            }
+            onClick={() => setIsFavorite((value) => !value)}
+            className="
+              absolute left-3 top-3 z-20
+              flex h-8 w-8
+              items-center justify-center
+              rounded-full
+              border border-white/70
+              bg-white/95
+              text-slate-400
+              shadow-[0_5px_18px_rgba(15,23,42,0.15)]
+              backdrop-blur-xl
+              transition-all duration-200
+              hover:scale-105
+              hover:text-rose-500
+              active:scale-95
+              dark:border-slate-700
+              dark:bg-slate-900/95
+            "
           >
-            <Heart className={`h-3.5 w-3.5 transition-colors ${isFavorite ? "fill-red-500 text-red-500" : "text-slate-400"}`} />
+            <Heart
+              className={`
+                h-4 w-4
+                transition-all duration-200
+                ${
+                  isFavorite
+                    ? "fill-rose-500 text-rose-500"
+                    : "text-slate-400"
+                }
+              `}
+              strokeWidth={2}
+            />
           </button>
         </div>
+      </div>
 
-        <div className="relative mt-3 flex flex-col items-center text-center">
-          <h3 className="truncate text-base font-bold tracking-tight">
-            <span className="bg-gradient-to-r from-[#252a67] to-[#0F766E] bg-clip-text text-transparent">
-              {doctor.user.name}
-            </span>
+      {/* =====================================================
+          CONTENT
+      ====================================================== */}
+      <div className="relative flex h-full flex-col px-4 pb-4 pt-4 sm:px-5 sm:pb-5">
+        {/* ===================================================
+            DOCTOR NAME
+        ==================================================== */}
+        <div className="text-center">
+          <h3
+            className="
+              truncate
+              text-[17px]
+              font-extrabold
+              tracking-[-0.025em]
+              text-slate-900
+              dark:text-white
+            "
+          >
+            {doctor.user.name}
           </h3>
 
+          {/* Qualification */}
           {doctor.qualification && (
-            <p className="mt-0.5 truncate text-xs font-medium text-slate-600 dark:text-slate-300">
+            <p
+              className="
+                mt-1
+                truncate
+                text-[11px]
+                font-semibold
+                text-slate-500
+                dark:text-slate-400
+              "
+            >
               {doctor.qualification}
             </p>
           )}
 
+          {/* Specialization */}
           {doctor.specialization && (
-            <p className="mt-0.5 flex items-center gap-1 truncate text-xs text-slate-500 dark:text-slate-400">
-              <Stethoscope className="h-3 w-3 shrink-0 text-[#14B8A6]" />
-              {doctor.specialization}
-            </p>
-          )}
+            <div
+              className="
+                mt-2
+                flex
+                items-center
+                justify-center
+                gap-1.5
+              "
+            >
+              <Stethoscope
+                className="h-3.5 w-3.5 shrink-0 text-[#14B8A6]"
+                strokeWidth={2.2}
+              />
 
-          <div className="mt-1.5 flex items-center gap-1">
-            <div className="flex items-center gap-0.5">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <Star key={star} className={`h-3 w-3 ${star <= Math.round(rating) ? "fill-amber-400 text-amber-400" : "fill-slate-200 text-slate-200"}`} />
-              ))}
+              <span
+                className="
+                  truncate
+                  text-[11px]
+                  font-semibold
+                  text-slate-600
+                  dark:text-slate-300
+                "
+              >
+                {doctor.specialization}
+              </span>
             </div>
-            <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">{rating}</span>
-            <span className="text-[10px] text-slate-400">· {reviews}</span>
-          </div>
-        </div>
-
-        <div className="my-3 h-px w-full bg-slate-100 dark:bg-slate-800" />
-
-        <div className="relative w-full">
-           <DoctorClinicInfo doctor={doctor} />
-        </div>
-
-        <div className="relative mt-3 flex items-center justify-center gap-1.5 text-xs font-medium">
-          {isAvailable ? (
-            <>
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-              </span>
-              <span className="text-emerald-600 dark:text-emerald-400">{t("availableNow") || "Available Now"}</span>
-            </>
-          ) : (
-            <>
-              <span className="relative flex h-2 w-2">
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-slate-400" />
-              </span>
-              <span className="text-slate-500 dark:text-slate-400">{t("currentlyUnavailable") || "Currently Unavailable"}</span>
-            </>
           )}
         </div>
 
-        <div className="relative mt-4 grid grid-cols-2 gap-2">
+        {/* ===================================================
+            RATING
+        ==================================================== */}
+        <div className="mt-3 flex items-center justify-center gap-2">
+          <div className="flex items-center gap-0.5">
+            {[1, 2, 3, 4, 5].map((star) => (
+              <Star
+                key={star}
+                className={`
+                  h-3.5 w-3.5
+                  ${
+                    star <= Math.round(rating)
+                      ? "fill-amber-400 text-amber-400"
+                      : "fill-slate-200 text-slate-200 dark:fill-slate-700 dark:text-slate-700"
+                  }
+                `}
+                strokeWidth={1.5}
+              />
+            ))}
+          </div>
+
+          <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200">
+            {rating.toFixed(1)}
+          </span>
+
+          <span className="text-[10px] text-slate-400">
+            ({reviews} reviews)
+          </span>
+        </div>
+
+        {/* ===================================================
+            DIVIDER
+        ==================================================== */}
+        <div className="my-4 h-px bg-slate-100 dark:bg-slate-800" />
+
+        {/* ===================================================
+            CLINIC INFORMATION
+        ==================================================== */}
+        <div className="min-h-[60px] w-full">
+          <DoctorClinicInfo doctor={doctor} />
+        </div>
+
+        {/* ===================================================
+            AVAILABILITY
+        ==================================================== */}
+        <div className="mt-3 flex justify-center">
+          {isAvailable ? (
+            <div
+              className="
+                inline-flex
+                items-center
+                gap-2
+                rounded-full
+                border
+                border-emerald-100
+                bg-emerald-50
+                px-3 py-1.5
+                dark:border-emerald-500/20
+                dark:bg-emerald-500/10
+              "
+            >
+              <span className="relative flex h-2 w-2">
+                <span
+                  className="
+                    absolute
+                    inline-flex
+                    h-full w-full
+                    animate-ping
+                    rounded-full
+                    bg-emerald-400
+                    opacity-60
+                  "
+                />
+
+                <span
+                  className="
+                    relative
+                    inline-flex
+                    h-2 w-2
+                    rounded-full
+                    bg-emerald-500
+                  "
+                />
+              </span>
+
+              <span
+                className="
+                  text-[10px]
+                  font-bold
+                  text-emerald-700
+                  dark:text-emerald-400
+                "
+              >
+                {t("availableNow") || "Available Now"}
+              </span>
+            </div>
+          ) : (
+            <div
+              className="
+                inline-flex
+                items-center
+                gap-2
+                rounded-full
+                border
+                border-slate-200
+                bg-slate-50
+                px-3 py-1.5
+                dark:border-slate-700
+                dark:bg-slate-900
+              "
+            >
+              <span className="h-2 w-2 rounded-full bg-slate-400" />
+
+              <span
+                className="
+                  text-[10px]
+                  font-semibold
+                  text-slate-500
+                  dark:text-slate-400
+                "
+              >
+                {t("currentlyUnavailable") ||
+                  "Currently Unavailable"}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* ===================================================
+            SINGLE PRIMARY ACTION
+
+            IMPORTANT:
+            This opens exactly the same doctor view page
+            that the old "View Profile" button opened.
+        ==================================================== */}
+        <div className="mt-5">
           <Link
             href={`/doctors/${doctor.id}`}
-            className="flex items-center justify-center rounded-lg border border-slate-200 bg-white px-2 py-2 text-[11px] font-semibold text-slate-600 transition-all hover:border-slate-300 hover:text-slate-800 active:scale-[0.98] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:text-slate-100"
+            className="
+              group/button
+              relative
+              flex
+              w-full
+              items-center
+              justify-center
+              gap-2
+              overflow-hidden
+              rounded-xl
+              bg-gradient-to-r
+              from-[#252a67]
+              via-[#354a94]
+              to-[#0F766E]
+              px-4
+              py-3
+              text-[11px]
+              font-extrabold
+              tracking-[0.01em]
+              text-white
+              shadow-[0_8px_22px_rgba(37,42,103,0.20)]
+              transition-all
+              duration-300
+              hover:-translate-y-0.5
+              hover:shadow-[0_14px_30px_rgba(37,42,103,0.27)]
+              active:translate-y-0
+              dark:shadow-[0_8px_22px_rgba(0,0,0,0.30)]
+            "
           >
-            {t("viewProfile") || "View Profile"}
+            {/* Shine animation */}
+            <span
+              className="
+                pointer-events-none
+                absolute
+                inset-y-0
+                -left-24
+                w-20
+                rotate-[18deg]
+                bg-white/20
+                blur-sm
+                transition-all
+                duration-700
+                group-hover/button:left-[120%]
+              "
+            />
+
+            <CalendarCheck
+              className="
+                relative z-10
+                h-4 w-4
+                transition-transform
+                duration-300
+                group-hover/button:scale-110
+              "
+              strokeWidth={2.3}
+            />
+
+            <span className="relative z-10">
+              {t("bookButton") || "Book Appointment"}
+            </span>
+
+            <span
+              className="
+                relative z-10
+                ml-0.5
+                text-white/60
+                transition-transform
+                duration-300
+                group-hover/button:translate-x-1
+              "
+            >
+              →
+            </span>
           </Link>
-          <button
-            type="button"
-            onClick={handleBookClick}
-            className="flex items-center justify-center rounded-lg bg-gradient-to-r from-[#252a67] to-[#14B8A6] px-2 py-2 text-[11px] font-semibold text-white shadow-sm shadow-[#14B8A6]/20 transition-all hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98]"
-          >
-            {showBooking ? t("cancel") || "Cancel" : t("bookButton")}
-          </button>
         </div>
-
-        {/* BOOKING MODAL */}
-        {showBooking && user && (
-          <div className="relative mt-3 animate-in slide-in-from-top-2 fade-in duration-300">
-            <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3 dark:border-slate-700 dark:bg-slate-800/40">
-              <div className="mb-2">
-                <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">{t("bookAppointment") || "Book an appointment"}</p>
-                <p className="mt-0.5 text-[10px] text-slate-500">{t("selectDatePrompt") || "Select your preferred date and time."}</p>
-              </div>
-
-              <div className="space-y-2">
-                {doctor.allClinics && doctor.allClinics.length > 0 && (
-                  <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-2 transition-all focus-within:border-[#252a67] focus-within:ring-2 focus-within:ring-[#252a67]/20 dark:border-slate-700 dark:bg-slate-900">
-                    <Building2 className="h-3.5 w-3.5 shrink-0 text-[#252a67]" />
-                    <select
-                      value={selectedClinicId}
-                      onChange={(e) => setSelectedClinicId(e.target.value)}
-                      className="w-full bg-transparent text-xs font-medium text-slate-700 outline-none dark:text-slate-200 cursor-pointer appearance-none"
-                    >
-                      {doctor.allClinics.map((c) => (
-                        <option key={c.id} value={c.id} className="text-slate-800 dark:text-slate-200">
-                          {c.clinicName} {c.city ? `(${c.city})` : ""} - ₹{c.associationDetails?.fee || doctor.fee}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-2 transition-all focus-within:border-[#252a67] focus-within:ring-2 focus-within:ring-[#252a67]/20 dark:border-slate-700 dark:bg-slate-900">
-                  <Calendar className="h-3.5 w-3.5 shrink-0 text-[#252a67]" />
-                  <input
-                    type="date"
-                    value={date}
-                    onChange={(e) => { setDate(e.target.value); setMessage(null); }}
-                    min={new Date().toISOString().split("T")[0]}
-                    className="w-full bg-transparent text-xs font-medium text-slate-700 outline-none dark:text-slate-200"
-                  />
-                </div>
-
-                <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-2 transition-all focus-within:border-[#252a67] focus-within:ring-2 focus-within:ring-[#252a67]/20 dark:border-slate-700 dark:bg-slate-900">
-                  <Clock className="h-3.5 w-3.5 shrink-0 text-[#252a67]" />
-                  <input
-                    type="time"
-                    value={time}
-                    onChange={(e) => { setTime(e.target.value); setMessage(null); }}
-                    min="08:00"
-                    max="20:00"
-                    step="1800"
-                    className="w-full bg-transparent text-xs font-medium text-slate-700 outline-none dark:text-slate-200"
-                  />
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleConfirmBooking}
-                disabled={!date || !time || bookMutation.isPending}
-                className="mt-3 flex w-full items-center justify-center rounded-lg bg-gradient-to-r from-[#0F766E] to-[#14B8A6] px-3 py-2 text-xs font-semibold text-white shadow-sm shadow-teal-500/20 transition-all hover:shadow-md hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-md"
-              >
-                {bookMutation.isPending ? (
-                  <>
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    <span className="ml-1.5">{t("bookingLoading")}</span>
-                  </>
-                ) : (
-                  t("confirmBooking") || "Confirm Booking"
-                )}
-              </button>
-
-              {message && (
-                <div className={`mt-2 flex items-start gap-1.5 rounded-lg border p-2 text-[11px] font-medium ${message.type === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400' : 'border-red-200 bg-red-50 text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-400'}`}>
-                  {message.type === 'success' ? <CalendarCheck className="h-3.5 w-3.5 shrink-0" /> : <Clock className="h-3.5 w-3.5 shrink-0" />}
-                  <span>{message.text}</span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
       </div>
-    </GradientBorderCard>
+    </article>
   );
 }
 
+/* =========================================================
+   PAGE
+========================================================= */
+
 export default function FeaturedDoctorsPage() {
-  const { data: doctors, isLoading } = usePublicFeaturedDoctors();
-  const featuredDoctors = (doctors as ExtendedDoctor[]) ?? [];
+  const { data: doctors, isLoading } =
+    usePublicFeaturedDoctors();
+
+  const featuredDoctors =
+    (doctors as ExtendedDoctor[]) ?? [];
 
   return (
-    <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-      {/* ================= COMPACT HEADER ================= */}
-      <div className={`relative rounded-[20px] p-[3px] bg-gradient-to-r from-[#252a67] via-[#3b4a8f] to-[#14B8A6] shadow-[0_4px_15px_-6px_rgba(37,42,103,0.3)] mb-8`}>
-        <div className="rounded-[calc(20px-3px)] bg-white dark:bg-slate-900 p-5 sm:p-6 overflow-hidden relative">
-          <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-gradient-to-br from-[#252a67]/[0.06] to-[#14B8A6]/[0.06] blur-3xl" />
-          <div className="flex items-center gap-2 mb-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-[#252a67] to-[#3b4a8f] text-white shadow-sm">
-              <Sparkles className="h-3.5 w-3.5" />
+    <main
+      className="
+        mx-auto
+        max-w-7xl
+        px-4
+        py-8
+        sm:px-6
+        lg:px-8
+      "
+    >
+      {/* =====================================================
+          PREMIUM PAGE HEADER
+      ====================================================== */}
+      <section
+        className="
+          relative
+          mb-8
+          overflow-hidden
+          rounded-[26px]
+          border
+          border-slate-200/80
+          bg-white
+          shadow-[0_8px_35px_rgba(15,23,42,0.05)]
+          dark:border-slate-800
+          dark:bg-slate-950
+        "
+      >
+        {/* Top gradient */}
+        <div
+          className="
+            absolute inset-x-0 top-0 h-[3px]
+            bg-gradient-to-r
+            from-[#252a67]
+            via-[#4f63b5]
+            to-[#14B8A6]
+          "
+        />
+
+        {/* Background glow */}
+        <div
+          className="
+            pointer-events-none
+            absolute
+            -right-20
+            -top-24
+            h-64
+            w-64
+            rounded-full
+            bg-gradient-to-br
+            from-[#252a67]/10
+            to-[#14B8A6]/10
+            blur-3xl
+          "
+        />
+
+        <div
+          className="
+            relative
+            px-5
+            py-7
+            sm:px-8
+            sm:py-8
+          "
+        >
+          {/* Eyebrow */}
+          <div className="mb-3 flex items-center gap-2.5">
+            <div
+              className="
+                flex h-9 w-9
+                items-center justify-center
+                rounded-xl
+                bg-gradient-to-br
+                from-[#252a67]
+                to-[#0F766E]
+                text-white
+                shadow-[0_6px_18px_rgba(37,42,103,0.18)]
+              "
+            >
+              <Sparkles
+                className="h-4 w-4"
+                strokeWidth={2.2}
+              />
             </div>
-            <p className="text-xs font-bold uppercase tracking-[0.15em] text-[#252a67] dark:text-blue-300">
+
+            <span
+              className="
+                text-[10px]
+                font-extrabold
+                uppercase
+                tracking-[0.18em]
+                text-[#252a67]
+                dark:text-blue-300
+              "
+            >
               Featured Directory
-            </p>
+            </span>
           </div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
+
+          {/* Title */}
+          <h1
+            className="
+              text-2xl
+              font-extrabold
+              tracking-[-0.04em]
+              text-slate-900
+              sm:text-3xl
+              dark:text-white
+            "
+          >
             Featured Doctors
           </h1>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Our top recommended and highly rated healthcare professionals.
-          </p>
-        </div>
-      </div>
 
-      {/* ================= GRID ================= */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5">
+          {/* Description */}
+          <p
+            className="
+              mt-1.5
+              max-w-2xl
+              text-sm
+              leading-6
+              text-slate-500
+              dark:text-slate-400
+            "
+          >
+            Connect with highly rated healthcare
+            professionals and book your appointment
+            with confidence.
+          </p>
+
+          {/* Small trust indicators */}
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <div
+              className="
+                inline-flex
+                items-center
+                gap-1.5
+                rounded-full
+                border
+                border-slate-200
+                bg-slate-50
+                px-3 py-1.5
+                dark:border-slate-800
+                dark:bg-slate-900
+              "
+            >
+              <BadgeCheck
+                className="h-3.5 w-3.5 text-blue-600"
+              />
+
+              <span
+                className="
+                  text-[10px]
+                  font-bold
+                  text-slate-600
+                  dark:text-slate-300
+                "
+              >
+                Verified Doctors
+              </span>
+            </div>
+
+            <div
+              className="
+                inline-flex
+                items-center
+                gap-1.5
+                rounded-full
+                border
+                border-slate-200
+                bg-slate-50
+                px-3 py-1.5
+                dark:border-slate-800
+                dark:bg-slate-900
+              "
+            >
+              <Star
+                className="h-3.5 w-3.5 fill-amber-400 text-amber-400"
+              />
+
+              <span
+                className="
+                  text-[10px]
+                  font-bold
+                  text-slate-600
+                  dark:text-slate-300
+                "
+              >
+                Highly Rated
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* =====================================================
+          DOCTOR GRID
+      ====================================================== */}
+      <section
+        className="
+          grid
+          grid-cols-2
+          gap-3
+          sm:grid-cols-3
+          sm:gap-5
+          lg:grid-cols-4
+          xl:grid-cols-5
+        "
+      >
+        {/* ===================================================
+            LOADING
+        ==================================================== */}
         {isLoading && (
-          <div className="col-span-full flex flex-col items-center justify-center py-16">
+          <div
+            className="
+              col-span-full
+              flex
+              flex-col
+              items-center
+              justify-center
+              py-24
+            "
+          >
             <div className="relative">
-              <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#2563EB] border-t-transparent" />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <Stethoscope className="h-4 w-4 text-[#2563EB]" />
+              <div
+                className="
+                  h-12
+                  w-12
+                  animate-spin
+                  rounded-full
+                  border-[3px]
+                  border-slate-200
+                  border-t-[#252a67]
+                  dark:border-slate-700
+                  dark:border-t-[#14B8A6]
+                "
+              />
+
+              <div
+                className="
+                  absolute
+                  inset-0
+                  flex
+                  items-center
+                  justify-center
+                "
+              >
+                <Stethoscope
+                  className="h-4 w-4 text-[#252a67]"
+                  strokeWidth={2}
+                />
               </div>
             </div>
-            <p className="mt-3 text-sm font-semibold text-slate-500">Loading featured doctors...</p>
+
+            <p
+              className="
+                mt-4
+                text-sm
+                font-semibold
+                text-slate-500
+                dark:text-slate-400
+              "
+            >
+              Loading featured doctors...
+            </p>
           </div>
         )}
 
-        {!isLoading && featuredDoctors.length === 0 && (
-          <div className="col-span-full flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-12 text-center dark:border-slate-800 dark:bg-slate-900">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-slate-400 dark:bg-slate-800">
-              <Star className="h-6 w-6" />
+        {/* ===================================================
+            EMPTY STATE
+        ==================================================== */}
+        {!isLoading &&
+          featuredDoctors.length === 0 && (
+            <div
+              className="
+                col-span-full
+                flex
+                flex-col
+                items-center
+                justify-center
+                rounded-[26px]
+                border
+                border-dashed
+                border-slate-200
+                bg-slate-50/70
+                px-6
+                py-20
+                text-center
+                dark:border-slate-800
+                dark:bg-slate-900/50
+              "
+            >
+              <div
+                className="
+                  flex h-16 w-16
+                  items-center justify-center
+                  rounded-2xl
+                  bg-white
+                  text-slate-400
+                  shadow-sm
+                  dark:bg-slate-800
+                "
+              >
+                <Stethoscope
+                  className="h-7 w-7"
+                  strokeWidth={1.7}
+                />
+              </div>
+
+              <p
+                className="
+                  mt-5
+                  text-base
+                  font-bold
+                  text-slate-800
+                  dark:text-slate-200
+                "
+              >
+                No Featured Doctors
+              </p>
+
+              <p
+                className="
+                  mt-1
+                  max-w-sm
+                  text-sm
+                  leading-6
+                  text-slate-500
+                  dark:text-slate-400
+                "
+              >
+                We couldn't find any featured doctors
+                at the moment.
+              </p>
             </div>
-            <p className="mt-3 text-base font-bold text-slate-800 dark:text-slate-200">No Featured Doctors</p>
-            <p className="mt-1 text-sm text-slate-500">We couldn't find any featured doctors at the moment.</p>
-          </div>
-        )}
+          )}
 
-        {featuredDoctors.map((doctor) => (
-          <DoctorCard key={doctor.id} doctor={doctor} />
-        ))}
-      </div>
+        {/* ===================================================
+            DOCTORS
+        ==================================================== */}
+        {!isLoading &&
+          featuredDoctors.map((doctor) => (
+            <DoctorCard
+              key={doctor.id}
+              doctor={doctor}
+            />
+          ))}
+      </section>
     </main>
   );
 }

@@ -257,7 +257,7 @@ export default function Hero() {
                 "
               >
                 {t("eyebrow") ||
-                  "TRUSTED HEALTHCARE FOR A BRIGHTER TOMORROW"}
+                  "Find the Right Health Services. Connect with the Right Care."}
               </p>
             </div>
 
