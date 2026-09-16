@@ -11,6 +11,22 @@ export function useNotificationSocket() {
   const { user, loading } = useAuth();
   const queryClient = useQueryClient();
 
+  // 🟢 নতুন লজিক: স্ক্রিনের যেকোনো জায়গায় ক্লিক বা টাচ করলে পপ-আপ (Toast) চলে যাবে
+  useEffect(() => {
+    const dismissToast = () => {
+      toast.dismiss(); // এটি স্ক্রিনে থাকা যেকোনো টোস্ট সাথে সাথে রিমুভ করে দেবে
+    };
+
+    // মাউস ক্লিক এবং মোবাইলের টাচ ইভেন্ট অ্যাড করা হলো
+    window.addEventListener("click", dismissToast);
+    window.addEventListener("touchstart", dismissToast);
+
+    return () => {
+      window.removeEventListener("click", dismissToast);
+      window.removeEventListener("touchstart", dismissToast);
+    };
+  }, []);
+
   useEffect(() => {
     if (loading || !user?.id) {
       return;
