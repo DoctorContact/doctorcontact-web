@@ -9,7 +9,6 @@ import {
   BarChart3,
   CalendarDays,
   Users,
-  IndianRupee,
   Stethoscope,
   CheckCircle2,
   XCircle,
@@ -169,7 +168,7 @@ export default function ClinicReportsPage() {
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-2.5 sm:gap-4 md:grid-cols-3 xl:grid-cols-4">
-              {/* CLINIC OVERVIEW CARD (WITH CLINIC PHOTO) */}
+              {/* CLINIC OVERVIEW CARD */}
               <button
                 type="button"
                 onClick={() => setSelectedDoctor("ALL")}
@@ -340,7 +339,7 @@ export default function ClinicReportsPage() {
         </div>
       </GradientCard>
 
-      <PeriodReportCard doctorId={doctorId} />
+      <PeriodReportCard doctorId={doctorId} doctorNameDisplay={doctorNameDisplay} />
       <GrowthCard />
     </div>
   );
@@ -350,7 +349,7 @@ export default function ClinicReportsPage() {
    PERIOD REPORT - Gradient Border
 ============================================================ */
 
-function PeriodReportCard({ doctorId }: { doctorId?: string }) {
+function PeriodReportCard({ doctorId, doctorNameDisplay }: { doctorId?: string; doctorNameDisplay: string }) {
   const t = useTranslations("ClinicReports");
   const tStatus = useTranslations("Status");
 
@@ -395,9 +394,20 @@ function PeriodReportCard({ doctorId }: { doctorId?: string }) {
   }
 
   function handleDownload(format: "pdf" | "excel") {
+    let datePart = "";
+    if (period === "daily" || period === "weekly") datePart = date;
+    else if (period === "monthly") datePart = month;
+    else if (period === "yearly") datePart = year;
+    else if (period === "custom") datePart = `${startDate}_to_${endDate}`;
+    
+    // Clean names to be safe for filenames
+    const safeDocName = doctorNameDisplay.replace(/[^\w\s-]/g, "").replace(/\s+/g, "_");
+    const filename = `Report_${safeDocName}_${datePart}.${format}`;
+
     download.mutate({
       ...currentParams(),
       format,
+      filename, // Sending the dynamic filename to the hook
     });
   }
 
@@ -537,7 +547,9 @@ function PeriodReportCard({ doctorId }: { doctorId?: string }) {
           <div className="mt-6 space-y-6 border-t border-slate-100 pt-5">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <ReportStat icon={Users} label={t("totalAppointments")} value={report.totalAppointments} />
-              <ReportStat icon={IndianRupee} label={t("estimatedRevenue")} value={`₹${report.estimatedRevenue}`} />
+              
+              {/* 🟢 Removed Income Field from Here */}
+              
               {period === "daily" && dashboard && (
                 <>
                   <ReportStat icon={Users} label={t("newPatients")} value={dashboard.newPatients} />
@@ -576,9 +588,7 @@ function PeriodReportCard({ doctorId }: { doctorId?: string }) {
                       <span className="rounded-md bg-gradient-to-r from-[#059669] to-[#10b981] px-2.5 py-1 text-white shadow-md shadow-green-500/30">
                         {doctor.completed} {tStatus("COMPLETED")}
                       </span>
-                      <span className="rounded-md bg-gradient-to-r from-[#f59e0b] to-[#f97316] px-2.5 py-1 text-white shadow-md shadow-orange-500/30">
-                        ₹{doctor.revenue}
-                      </span>
+                      {/* 🟢 Removed Doctor's Revenue Field from Here */}
                     </div>
                   </div>
                 ))}

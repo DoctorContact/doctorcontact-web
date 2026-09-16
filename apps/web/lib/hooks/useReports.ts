@@ -41,11 +41,13 @@ export function usePeriodReport() {
 
 export function useDownloadReport() {
   return useMutation({
+    // 🟢 Fix: Added `filename` to the expected parameters
     mutationFn: async ({
       period,
       format,
+      filename,
       ...query
-    }: PeriodParams & { format: "pdf" | "excel" }) => {
+    }: PeriodParams & { format: "pdf" | "excel"; filename?: string }) => {
       const res = await api.get("/reports/" + period, {
         params: { ...query, format },
         responseType: "blob",
@@ -53,7 +55,10 @@ export function useDownloadReport() {
       const url = URL.createObjectURL(res.data);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "report." + (format === "pdf" ? "pdf" : "xlsx");
+      
+      // 🟢 Fix: Use the dynamic filename if provided, otherwise fallback to default
+      a.download = filename || ("report." + (format === "pdf" ? "pdf" : "xlsx"));
+      
       document.body.appendChild(a);
       a.click();
       a.remove();

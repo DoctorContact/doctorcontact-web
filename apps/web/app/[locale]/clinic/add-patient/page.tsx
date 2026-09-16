@@ -9,9 +9,15 @@ import {
   Award,
   Stethoscope,
   ArrowRight,
-  Clock
+  Clock,
+  Download,
+  Users,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
+
+// 🟢 NEW: Client-side PDF libraries
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 import { api } from "@/lib/api";
 import { useClinicProfile } from "@/lib/hooks/useClinic";
@@ -38,15 +44,11 @@ function formatDoctorName(name?: string) {
   return cleanName ? `Dr. ${cleanName}` : "Dr. Doctor";
 }
 
-// 🟢 NEW: Get exact local date (Prevents timezone bug causing yesterday's date)
 function getTodayLocal() {
   const tzOffset = new Date().getTimezoneOffset() * 60000;
   return new Date(Date.now() - tzOffset).toISOString().split("T")[0];
 }
 
-// Formats a "YYYY-MM-DD" into the "Today" / "13 Sep" label the date-strip
-// shows — same formatting the patient-facing booking modal uses, so the
-// clinic sees dates the exact same way patients do.
 function formatDateStripLabel(dateStr: string) {
   const [y, m, d] = dateStr.split("-").map(Number);
   const dt = new Date(y, m - 1, d);
@@ -83,14 +85,11 @@ export default function ClinicAddPatientPage() {
   const [isExistingPatient, setIsExistingPatient] = useState(false);
 
   // Schedule & Date States
-  const [date, setDate] = useState(""); // set once real available dates load — see below
+  const [date, setDate] = useState("");
   const [schedules, setSchedules] = useState<any[]>([]);
   const [selectedScheduleId, setSelectedScheduleId] = useState("");
   const [isFetchingSchedules, setIsFetchingSchedules] = useState(false);
 
-  // Date strip — same "only real, actually-bookable dates" list the patient
-  // booking modal uses, instead of a blind calendar the clinic has to
-  // manually click through date-by-date to find a day with sessions.
   const [availableDates, setAvailableDates] = useState<AvailableDateEntry[]>([]);
   const [isFetchingDates, setIsFetchingDates] = useState(false);
 
@@ -145,7 +144,7 @@ export default function ClinicAddPatientPage() {
   }, [selectedDoctor, clinic?.id, date]);
 
   // ============================================================
-  // FETCH AVAILABLE DATES (fast date-strip, same as patient booking flow)
+  // FETCH AVAILABLE DATES
   // ============================================================
 
   useEffect(() => {
@@ -165,8 +164,6 @@ export default function ClinicAddPatientPage() {
         if (response.data?.success) {
           const dates: AvailableDateEntry[] = response.data.data.dates || [];
           setAvailableDates(dates);
-          // Auto-select the very next available date so the clinic sees
-          // sessions immediately instead of guessing which date to pick.
           if (dates.length > 0) setDate(dates[0].date);
         }
       } catch (error) {
@@ -179,6 +176,29 @@ export default function ClinicAddPatientPage() {
 
     fetchAvailableDates();
   }, [selectedDoctor, clinic?.id]);
+
+  // ============================================================
+  // 🟢 NEW: FETCH APPOINTMENTS FOR SELECTED DATE (BACKGROUND)
+  // ============================================================
+  const { data: allAppointments = [], isLoading: isLoadingAppointments, refetch: refetchAppointments } = useQuery({
+    queryKey: ["clinicAppointments", clinic?.id, selectedDoctor?.id, date],
+    queryFn: async () => {
+      if (!clinic?.id || !selectedDoctor?.id || !date) return [];
+      const response = await api.get("/appointments/clinic", {
+        params: { doctorId: selectedDoctor.id, date },
+      });
+      return response.data?.data?.appointments || [];
+    },
+    enabled: !!(clinic?.id && selectedDoctor?.id && date), // Only fetch if these exist
+  });
+
+  // Filter appointments to show ONLY those for the currently selected session
+  const sessionAppointments = allAppointments.filter(
+    (appt: any) => appt.queue?.scheduleId === selectedScheduleId
+  );
+
+  const onlineCount = sessionAppointments.filter((a: any) => a.bookingSource === "ONLINE").length;
+  const offlineCount = sessionAppointments.length - onlineCount;
 
   // ============================================================
   // PHONE CHECK (AUTO-FILL EXISTING PATIENT)
@@ -232,10 +252,6 @@ export default function ClinicAddPatientPage() {
         throw new Error("Please select a doctor, date, and an available session.");
       }
 
-      // Combine Date + Start Time to prevent Timezone bugs
-      const selectedSchedule = schedules.find(s => s.id === selectedScheduleId);
-      const dateTime = new Date(`${date}T${selectedSchedule?.startTime || "00:00"}`).toISOString();
-
       const payload: any = {
         doctorId: selectedDoctor.id,
         clinicId: clinic?.id,
@@ -244,7 +260,6 @@ export default function ClinicAddPatientPage() {
         bookingSource: date === getTodayLocal() ? "WALK_IN" : "RECEPTION"
       };
 
-      // Pass the potentially updated name/age directly inside newPatient payload
       if (isExistingPatient && patientId) {
         payload.patientId = patientId;
       } else {
@@ -264,12 +279,83 @@ export default function ClinicAddPatientPage() {
       setAge("");
       setPatientId("");
       setIsExistingPatient(false);
-      setSelectedDoctor(null);
+      
+      // Refresh the table silently
+      refetchAppointments();
     },
     onError: (error: any) => {
       toast.error(error?.response?.data?.message || error?.message || "Failed to book appointment");
     },
   });
+
+// ============================================================
+  // 🟢 ZERO-SERVER-LOAD PDF GENERATOR (FIXED)
+  // ============================================================
+  const generatePDF = () => {
+    if (sessionAppointments.length === 0) {
+      toast.error("No patients to download for this session.");
+      return;
+    }
+
+    const doc = new jsPDF();
+    const doctorName = formatDoctorName(selectedDoctor?.user?.name || selectedDoctor?.name);
+    const selectedSession = schedules.find((s) => s.id === selectedScheduleId);
+    
+    // 🟢 Fix 1: TypeScript Error Fixed (Removed clinic?.name)
+    let rawClinicName = clinic?.clinicName || "Clinic Patient List";
+    
+    // 🟢 Fix 2: PDF Gibberish Text Fixed 
+    // jsPDF ডিফল্ট ফন্টে বাংলা/হিন্দি সাপোর্ট করে না, তাই শুধু ইংরেজি অক্ষর ফিল্টার করা হলো
+    const clinicName = rawClinicName.replace(/[^\x00-\x7F]/g, "").trim() || "Clinic Patient List";
+
+    // Header styling
+    doc.setFontSize(18);
+    doc.setTextColor(31, 78, 120); // Primary Dark Blue
+    doc.text(clinicName, 14, 20);
+
+    doc.setFontSize(12);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Doctor: ${doctorName}`, 14, 28);
+    doc.text(`Date: ${date}   |   Session: ${selectedSession?.startTime || "N/A"} - ${selectedSession?.endTime || "N/A"}`, 14, 34);
+    
+    doc.setFontSize(10);
+    doc.text(`Total: ${sessionAppointments.length} (Online: ${onlineCount}, Walk-in: ${offlineCount})`, 14, 40);
+
+    // Line divider
+    doc.setDrawColor(200, 200, 200);
+    doc.line(14, 44, 196, 44);
+
+    // Prepare table data
+    const tableData = sessionAppointments.map((appt: any, index: number) => {
+      // পেশেন্টের নামেও যদি বাংলা/হিন্দি থাকে, সেটাকে ফিল্টার করা হচ্ছে যাতে PDF ক্র্যাশ না করে
+      let pName = appt.patient?.user?.name || appt.patient?.name || "-";
+      pName = pName.replace(/[^\x00-\x7F]/g, "").trim() || "Unknown";
+
+      return [
+        String(index + 1),
+        String(appt.token),
+        pName,
+        appt.patient?.user?.phone || appt.patient?.phone || "-",
+        appt.bookingSource === "ONLINE" ? "Online" : "Walk-in",
+        appt.status,
+      ];
+    });
+
+    // Draw Table
+    autoTable(doc, {
+      startY: 50,
+      head: [["#", "Token", "Patient Name", "Phone", "Type", "Status"]],
+      body: tableData,
+      theme: "striped",
+      headStyles: { fillColor: [37, 42, 103], textColor: 255 },
+      styles: { fontSize: 10, cellPadding: 3 },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+    });
+
+    // Save File
+    doc.save(`Patient_List_${doctorName.replace(/\s+/g, "_")}_${date}.pdf`);
+    toast.success("PDF Downloaded Successfully!");
+  };
 
   // ============================================================
   // PATIENT FORM RENDER
@@ -281,7 +367,7 @@ export default function ClinicAddPatientPage() {
     const specialization = selectedDoctor?.specialization || "General";
 
     return (
-      <div className="min-h-screen bg-[#fafbfc] px-3 py-5 sm:p-6 lg:p-8 dark:bg-slate-950">
+      <div className="min-h-screen bg-[#fafbfc] px-3 py-5 sm:p-6 lg:p-8 dark:bg-slate-950 pb-20">
         <div className="mx-auto w-full max-w-2xl">
           <button type="button" onClick={() => setSelectedDoctor(null)} className="group mb-5 inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition-colors hover:text-[#252a67] dark:hover:text-white">
             <ArrowRight className="h-4 w-4 rotate-180 transition-transform duration-200 group-hover:-translate-x-1" />
@@ -310,7 +396,7 @@ export default function ClinicAddPatientPage() {
             </div>
           </div>
 
-          <div className="rounded-[26px] bg-gradient-to-br from-[#252a67] via-[#3b4a8f] to-[#14B8A6] p-[1.5px] shadow-[0_14px_38px_-18px_rgba(37,42,103,0.45)]">
+          <div className="rounded-[26px] bg-gradient-to-br from-[#252a67] via-[#3b4a8f] to-[#14B8A6] p-[1.5px] shadow-[0_14px_38px_-18px_rgba(37,42,103,0.45)] mb-6">
             <div className="overflow-hidden rounded-[24px] bg-white dark:bg-slate-900">
               <div className="relative overflow-hidden border-b border-slate-100 dark:border-slate-800 bg-gradient-to-r from-[#252a67]/[0.035] via-white to-[#14B8A6]/[0.05] dark:from-[#252a67]/20 dark:via-slate-900 dark:to-[#14B8A6]/10 px-5 py-5 sm:px-6">
                 <div className="flex items-center gap-2.5">
@@ -324,7 +410,7 @@ export default function ClinicAddPatientPage() {
 
               <div className="space-y-5 p-5 sm:p-6">
                 
-                {/* 🟢 DATE STRIP — only real, actually-bookable dates ever appear here (same as the patient booking flow), so there's no guessing */}
+                {/* DATE STRIP */}
                 <div>
                   <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">Appointment Date</label>
                   {isFetchingDates ? (
@@ -364,7 +450,7 @@ export default function ClinicAddPatientPage() {
                   )}
                 </div>
 
-                {/* 🟢 SESSION SELECTOR */}
+                {/* SESSION SELECTOR */}
                 <div>
                   <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">Select Session</label>
                   {!date ? (
@@ -416,27 +502,15 @@ export default function ClinicAddPatientPage() {
                   {isExistingPatient && <p className="mt-1 text-xs font-bold text-green-600 flex items-center gap-1"><BadgeCheck className="h-3 w-3" /> Existing patient auto-filled (You can edit details below)</p>}
                 </div>
 
-                {/* NAME & AGE (🟢 REMOVED DISABLED ATTRIBUTES) */}
+                {/* NAME & AGE */}
                 <div className="grid grid-cols-3 gap-4">
                   <div className="col-span-2">
                     <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">Patient Name</label>
-                    <input 
-                      type="text" 
-                      placeholder="Enter patient name" 
-                      value={name} 
-                      onChange={(e) => setName(e.target.value)} 
-                      className="w-full rounded-xl border border-slate-200 px-4 py-3.5 text-sm outline-none hover:border-slate-300 focus:border-[#252a67] dark:text-white dark:bg-slate-800 dark:border-slate-700 transition-colors" 
-                    />
+                    <input type="text" placeholder="Enter patient name" value={name} onChange={(e) => setName(e.target.value)} className="w-full rounded-xl border border-slate-200 px-4 py-3.5 text-sm outline-none hover:border-slate-300 focus:border-[#252a67] dark:text-white dark:bg-slate-800 dark:border-slate-700 transition-colors" />
                   </div>
                   <div>
                     <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">Age</label>
-                    <input 
-                      type="number" 
-                      placeholder="Age" 
-                      value={age} 
-                      onChange={(e) => setAge(e.target.value)} 
-                      className="w-full rounded-xl border border-slate-200 px-4 py-3.5 text-sm outline-none hover:border-slate-300 focus:border-[#252a67] dark:text-white text-center dark:bg-slate-800 dark:border-slate-700 transition-colors" 
-                    />
+                    <input type="number" placeholder="Age" value={age} onChange={(e) => setAge(e.target.value)} className="w-full rounded-xl border border-slate-200 px-4 py-3.5 text-sm outline-none hover:border-slate-300 focus:border-[#252a67] dark:text-white text-center dark:bg-slate-800 dark:border-slate-700 transition-colors" />
                   </div>
                 </div>
 
@@ -452,6 +526,101 @@ export default function ClinicAddPatientPage() {
               </div>
             </div>
           </div>
+
+          {/* ============================================================
+              🟢 NEW: PATIENT LIST TABLE & PDF DOWNLOAD SECTION
+              ============================================================ */}
+          {selectedScheduleId && (
+            <div className="rounded-[24px] border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 overflow-hidden">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 bg-slate-50/50 p-4 dark:border-slate-800 dark:bg-slate-800/50">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400">
+                    <Users className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">Session Patient List</h3>
+                    <div className="mt-1 flex items-center gap-2 text-xs font-semibold text-slate-500">
+                      <span className="rounded bg-slate-200 px-1.5 py-0.5 text-slate-700 dark:bg-slate-700 dark:text-slate-300">
+                        Total: {sessionAppointments.length}
+                      </span>
+                      <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400">
+                        Online: {onlineCount}
+                      </span>
+                      <span className="rounded bg-orange-100 px-1.5 py-0.5 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400">
+                        Walk-in: {offlineCount}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  onClick={generatePDF}
+                  disabled={sessionAppointments.length === 0}
+                  className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#14B8A6] to-[#0F766E] px-4 py-2.5 text-xs font-bold text-white shadow-md shadow-teal-500/20 transition-all hover:scale-[1.02] hover:shadow-lg disabled:opacity-50 disabled:hover:scale-100 w-full sm:w-auto"
+                >
+                  <Download className="h-4 w-4" />
+                  Download PDF
+                </button>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm text-slate-600 dark:text-slate-300">
+                  <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:bg-slate-800/50 dark:text-slate-400">
+                    <tr>
+                      <th className="px-4 py-3">Token</th>
+                      <th className="px-4 py-3">Patient Name</th>
+                      <th className="px-4 py-3">Phone</th>
+                      <th className="px-4 py-3">Type</th>
+                      <th className="px-4 py-3">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                    {isLoadingAppointments ? (
+                      <tr>
+                        <td colSpan={5} className="py-8 text-center text-slate-400">
+                          <Loader2 className="mx-auto h-5 w-5 animate-spin mb-2" />
+                          Loading patients...
+                        </td>
+                      </tr>
+                    ) : sessionAppointments.length > 0 ? (
+                      sessionAppointments.map((appt: any) => (
+                        <tr key={appt.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50">
+                          <td className="px-4 py-3 font-bold text-slate-900 dark:text-white">
+                            #{appt.token}
+                          </td>
+                          <td className="px-4 py-3 font-medium">
+                            {appt.patient?.user?.name || appt.patient?.name || "-"}
+                          </td>
+                          <td className="px-4 py-3 text-xs">
+                            {appt.patient?.user?.phone || appt.patient?.phone || "-"}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                              appt.bookingSource === "ONLINE" 
+                                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400"
+                                : "bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400"
+                            }`}>
+                              {appt.bookingSource === "ONLINE" ? "Online" : "Walk-in"}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-xs font-semibold">
+                            {appt.status}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={5} className="py-8 text-center text-slate-400">
+                          <Users className="mx-auto h-6 w-6 mb-2 opacity-50" />
+                          No patients booked for this session yet.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
