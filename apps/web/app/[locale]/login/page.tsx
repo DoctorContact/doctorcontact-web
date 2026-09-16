@@ -198,7 +198,7 @@ function PatientPhoneLogin({ onSuccess }: { onSuccess: (user: AuthUser) => void 
               <input
                 value={phoneInput}
                 onChange={(e) => setPhoneInput(e.target.value.replace(/\D/g, ""))}
-                type="tel" maxLength={12} placeholder="e.g. 9876543210"
+                type="tel" maxLength={12} placeholder="e.g. 6296398479"
                 className="w-full rounded-xl border border-gray-200 bg-gray-50/50 py-3 pr-4 pl-10 text-sm font-medium text-gray-900 outline-none transition-all placeholder:text-gray-400 focus:border-[var(--color-primary)] focus:bg-white focus:ring-4 focus:ring-[var(--color-primary)]/10"
               />
             </div>

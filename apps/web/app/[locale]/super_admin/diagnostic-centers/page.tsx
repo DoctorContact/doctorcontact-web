@@ -588,7 +588,7 @@ export default function AdminDiagnosticCentersPage() {
                     onChange={(e) =>
                       setFormData({ ...formData, whatsapp: e.target.value })
                     }
-                    placeholder="e.g. 919876543210"
+                    placeholder="e.g. 916296398479"
                     className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-900 outline-none transition focus:border-blue-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                   />
                 </div>

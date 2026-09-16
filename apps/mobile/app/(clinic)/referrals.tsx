@@ -295,7 +295,7 @@ export default function ClinicReferralsScreen() {
                       style={[styles.formInput, { flex: 1 }]}
                       value={phoneSearch}
                       onChangeText={setPhoneSearch}
-                      placeholder="e.g. 9876543210"
+                      placeholder="e.g. 6296398479"
                       keyboardType="phone-pad"
                       placeholderTextColor={Colors.light.ink400}
                     />

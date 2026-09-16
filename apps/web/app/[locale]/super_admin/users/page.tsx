@@ -675,7 +675,7 @@ export default function SuperAdminUsersPage() {
       onChange={(e) =>
         setAdminFormData({ ...adminFormData, phone: e.target.value })
       }
-      placeholder="e.g. +91 9876543210"
+      placeholder="e.g. +91 6296398479"
       className="w-full rounded-lg border border-slate-200 bg-slate-50/50 py-1.5 pl-8 pr-3 text-xs text-slate-900 outline-none transition focus:border-blue-600 focus:bg-white dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-100 dark:focus:border-blue-500"
     />
   </div>
