@@ -281,7 +281,7 @@ export default function Hero() {
               "
             >
               Your Health{" "}
-              <span className="text-[#1C63E7]">
+              <span className="text-[#5CA904]">
                 Our Priority
               </span>
             </h1>
@@ -727,7 +727,7 @@ export default function Hero() {
                   </p>
 
                   <p className="text-sm font-extrabold leading-tight text-[#0F1B33] dark:text-ink-900">
-                    10,000+
+                    100+
                   </p>
 
                   <p className="text-[9px] font-medium text-slate-400">

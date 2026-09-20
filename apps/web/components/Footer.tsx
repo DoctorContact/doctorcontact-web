@@ -389,6 +389,17 @@ export default function Footer() {
 
               <span className="h-1 w-1 rounded-full bg-slate-300 dark:bg-slate-700" />
 
+              {/* 🟢 নতুন Account Deletion লিংক */}
+  <Link
+    href="/account-deletion"
+    className="font-medium text-slate-500 transition-colors hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400"
+  >
+    {t("accountDeletion")}
+  </Link>
+
+  {/* 🟢 মাঝখানের ডট (Separator) */}
+  <span className="h-1 w-1 rounded-full bg-slate-300 dark:bg-slate-700" />
+
               <Link
                 href="/terms"
                 className="font-medium text-slate-500 transition-colors hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400"
