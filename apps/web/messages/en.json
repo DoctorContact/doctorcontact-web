@@ -37,7 +37,7 @@
     "heroSubtitle": "Find trusted doctors, nearby clinics, book appointments and access healthcare services — all in one place.",
     "popularLabel": "Popular searches",
     "trustedBy": "Happy Patients trust us",
-    "trustedCount": "10,000+"
+    "trustedCount": "100+"
   },
   "Specialties": {
     "title": "Search by Specialty",
@@ -67,6 +67,7 @@
     "tagline": "Find verified doctors, book appointments, and track your queue in real time.",
     "platformHeading": "Platform",
     "companyHeading": "Company",
+    "accountDeletion": "Account Deletion",
     "helpHeading": "Need Help?",
     "aboutUs": "About Us",
     "privacyPolicy": "Privacy Policy",

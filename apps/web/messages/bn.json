@@ -37,7 +37,7 @@
     "heroSubtitle": "বিশ্বস্ত ডাক্তার ও কাছাকাছি ক্লিনিক খুঁজুন, অ্যাপয়েন্টমেন্ট বুক করুন এবং স্বাস্থ্যসেবা পান — সবকিছু এক জায়গায়।",
     "popularLabel": "জনপ্রিয় অনুসন্ধান",
     "trustedBy": "সন্তুষ্ট রোগীরা আমাদের বিশ্বাস করেন",
-    "trustedCount": "10,000+"
+    "trustedCount": "100+"
   },
   "Specialties": {
     "title": "বিশেষজ্ঞতা অনুযায়ী খুঁজুন",
@@ -68,6 +68,7 @@
     "platformHeading": "প্ল্যাটফর্ম",
     "companyHeading": "কোম্পানি",
     "helpHeading": "সাহায্য দরকার?",
+    "accountDeletion": "অ্যাকাউন্ট ডিলিট",
     "aboutUs": "আমাদের সম্পর্কে",
     "privacyPolicy": "গোপনীয়তা নীতি",
     "termsConditions": "শর্তাবলি",
