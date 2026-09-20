@@ -380,16 +380,17 @@ export default function Footer() {
 
             {/* Legal + Developer */}
             <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 sm:justify-end">
-              <Link
-                href="/privacy"
-                className="font-medium text-slate-500 transition-colors hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400"
-              >
-                {t("privacyPolicy")}
-              </Link>
+  <Link
+    href="/privacy"
+    className="font-medium text-slate-500 transition-colors hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400"
+  >
+    {t("privacyPolicy")}
+  </Link>
 
-              <span className="h-1 w-1 rounded-full bg-slate-300 dark:bg-slate-700" />
+  {/* 🟢 মাঝখানের ডট (Separator) */}
+  <span className="h-1 w-1 rounded-full bg-slate-300 dark:bg-slate-700" />
 
-              {/* 🟢 নতুন Account Deletion লিংক */}
+  {/* 🟢 নতুন Account Deletion লিংক */}
   <Link
     href="/account-deletion"
     className="font-medium text-slate-500 transition-colors hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400"
@@ -400,27 +401,27 @@ export default function Footer() {
   {/* 🟢 মাঝখানের ডট (Separator) */}
   <span className="h-1 w-1 rounded-full bg-slate-300 dark:bg-slate-700" />
 
-              <Link
-                href="/terms"
-                className="font-medium text-slate-500 transition-colors hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400"
-              >
-                {t("termsConditions")}
-              </Link>
+  <Link
+    href="/terms"
+    className="font-medium text-slate-500 transition-colors hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400"
+  >
+    {t("termsConditions")}
+  </Link>
 
-              <span className="hidden h-4 w-px bg-slate-200 sm:block dark:bg-slate-700" />
+  <span className="hidden h-4 w-px bg-slate-200 sm:block dark:bg-slate-700" />
 
-              <span className="text-slate-400 dark:text-slate-500">
-                {t("developedBy")}{" "}
-                <a
-                  href="https://soumyachatterjee.netlify.app/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-semibold text-slate-600 underline decoration-dotted underline-offset-4 transition-colors hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400"
-                >
-                  Soumya Chatterjee
-                </a>
-              </span>
-            </div>
+  <span className="text-slate-400 dark:text-slate-500">
+    {t("developedBy")}{" "}
+    <a
+      href="https://soumyachatterjee.netlify.app/"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="font-semibold text-slate-600 underline decoration-dotted underline-offset-4 transition-colors hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400"
+    >
+      Soumya Chatterjee
+    </a>
+  </span>
+</div>
           </div>
         </div>
       </div>
