@@ -86,7 +86,8 @@ function handleLogoutAndRedirect(error: any) {
           currentPath.includes("/announcements") || 
           currentPath.includes("/doctors") || 
           currentPath.includes("/privacy") || 
-          currentPath.includes("/clinics");
+          currentPath.includes("/clinics")  ||
+          currentPath.includes("/account-deletion");
 
         if (!isPublicRoute) {
           window.location.href = "/login";
