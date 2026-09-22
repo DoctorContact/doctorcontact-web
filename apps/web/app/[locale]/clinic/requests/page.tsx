@@ -13,10 +13,6 @@ import {
   XCircle,
   Clock3,
   Sparkles,
-  TrendingUp,
-  Award,
-  UserCheck,
-  UserX,
 } from "lucide-react";
 import {
   useReceivedDoctorRequests,
@@ -25,10 +21,19 @@ import {
   type SentDoctorRequest,
 } from "@/lib/hooks/useClinic";
 
+// 🟢 Multi-Language Name Parser
+const parseMultiLangName = (rawName: string = "") => {
+  const parts = rawName.split(" | ");
+  return {
+    en: parts[0]?.trim() || rawName,
+    bn: parts[1]?.trim() || "",
+    hi: parts[2]?.trim() || "",
+  };
+};
+
 // ============================================================
 // GRADIENT BORDER CARD COMPONENT
 // ============================================================
-
 function GradientCard({
   children,
   className = "",
@@ -50,8 +55,9 @@ function GradientCard({
 export default function ClinicRequestsPage() {
   const t = useTranslations("ClinicRequests");
   const tDays = useTranslations("Days");
-  const { data: received, isLoading: loadingReceived } =
-    useReceivedDoctorRequests();
+  const locale = useLocale(); // 🟢 Locale for parsing language
+
+  const { data: received, isLoading: loadingReceived } = useReceivedDoctorRequests();
   const { data: sent, isLoading: loadingSent } = useSentDoctorRequests();
   const respond = useRespondToDoctorRequest();
 
@@ -60,7 +66,7 @@ export default function ClinicRequestsPage() {
   return (
     <div className="space-y-6">
       {/* =====================================================
-          PAGE HEADER - Gradient Border
+          PAGE HEADER
       ====================================================== */}
       <GradientCard gradient="from-[#1e3a8a] via-[#3b82f6] to-[#60a5fa]">
         <div className="p-5">
@@ -91,7 +97,7 @@ export default function ClinicRequestsPage() {
       </GradientCard>
 
       {/* =====================================================
-          INCOMING REQUESTS - Gradient Border
+          INCOMING REQUESTS
       ====================================================== */}
       <GradientCard gradient="from-[#667eea] via-[#764ba2] to-[#f093fb]">
         <div className="p-5 sm:p-6">
@@ -138,6 +144,7 @@ export default function ClinicRequestsPage() {
                   request={r}
                   t={t}
                   tDays={tDays}
+                  locale={locale} // 🟢 Pass locale
                   onRespond={(action) =>
                     respond.mutate({ associationId: r.id, action })
                   }
@@ -150,7 +157,7 @@ export default function ClinicRequestsPage() {
       </GradientCard>
 
       {/* =====================================================
-          SENT REQUESTS - Gradient Border
+          SENT REQUESTS
       ====================================================== */}
       <GradientCard gradient="from-[#1e3a8a] via-[#3b82f6] to-[#059669]">
         <div className="p-5 sm:p-6">
@@ -191,48 +198,56 @@ export default function ClinicRequestsPage() {
             </div>
           ) : (
             <div className="grid gap-3">
-              {sent.map((r) => (
-                <div
-                  key={r.id}
-                  className="flex flex-col gap-4 rounded-2xl border border-slate-100 bg-white p-4 shadow-[0_2px_10px_rgba(0,0,0,0.02)] transition hover:shadow-lg sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div className="flex min-w-0 items-center gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-r from-[#1e3a8a] to-[#3b82f6] text-white shadow-md shadow-blue-500/30">
-                      <span className="text-sm font-bold">
-                        {getInitials(r.doctor?.user?.name ?? "Doctor")}
-                      </span>
+              {sent.map((r) => {
+                // 🟢 Parse Name for Sent Requests
+                const parsedName = parseMultiLangName(r.doctor?.user?.name);
+                const displayName = locale === "bn" && parsedName.bn ? parsedName.bn : 
+                                    locale === "hi" && parsedName.hi ? parsedName.hi : 
+                                    parsedName.en || "Unknown Doctor";
+
+                return (
+                  <div
+                    key={r.id}
+                    className="flex flex-col gap-4 rounded-2xl border border-slate-100 bg-white p-4 shadow-[0_2px_10px_rgba(0,0,0,0.02)] transition hover:shadow-lg sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-r from-[#1e3a8a] to-[#3b82f6] text-white shadow-md shadow-blue-500/30">
+                        <span className="text-sm font-bold">
+                          {getInitials(displayName)}
+                        </span>
+                      </div>
+
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-bold text-slate-800">
+                          {displayName.startsWith("Dr.") || displayName.startsWith("ডাঃ") || displayName.startsWith("डॉ.") ? displayName : `Dr. ${displayName}`}
+                        </p>
+                        {r.dayOfWeek && (
+                          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-medium text-slate-500">
+                            <div className="flex items-center gap-1.5">
+                              <CalendarDays className="h-3.5 w-3.5 text-[#1e40af]" />
+                              <span>
+                                {tDays.has(r.dayOfWeek)
+                                  ? tDays(r.dayOfWeek)
+                                  : r.dayOfWeek}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <Clock className="h-3.5 w-3.5 text-[#1e40af]" />
+                              <span>
+                                {r.startTime} – {r.endTime}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
 
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-bold text-slate-800">
-                        {r.doctor?.user?.name ?? "Unknown Doctor"}
-                      </p>
-                      {r.dayOfWeek && (
-                        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-medium text-slate-500">
-                          <div className="flex items-center gap-1.5">
-                            <CalendarDays className="h-3.5 w-3.5 text-[#1e40af]" />
-                            <span>
-                              {tDays.has(r.dayOfWeek)
-                                ? tDays(r.dayOfWeek)
-                                : r.dayOfWeek}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <Clock className="h-3.5 w-3.5 text-[#1e40af]" />
-                            <span>
-                              {r.startTime} – {r.endTime}
-                            </span>
-                          </div>
-                        </div>
-                      )}
+                    <div className="shrink-0">
+                      <StatusBadge status={r.status} t={t} />
                     </div>
                   </div>
-
-                  <div className="shrink-0">
-                    <StatusBadge status={r.status} t={t} />
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -250,28 +265,34 @@ function IncomingRow({
   busy,
   t,
   tDays,
+  locale,
 }: {
   request: SentDoctorRequest;
   onRespond: (action: "ACCEPT" | "REJECT") => void;
   busy: boolean;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   t: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   tDays: any;
+  locale: string;
 }) {
+  // 🟢 Parse Name for Incoming Requests
+  const parsedName = parseMultiLangName(request.doctor?.user?.name);
+  const displayName = locale === "bn" && parsedName.bn ? parsedName.bn : 
+                      locale === "hi" && parsedName.hi ? parsedName.hi : 
+                      parsedName.en || "Unknown Doctor";
+
   return (
     <div className="flex flex-col gap-4 rounded-2xl border border-[#667eea]/10 bg-gradient-to-r from-[#667eea]/5 to-transparent p-4 transition hover:from-[#667eea]/10 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex min-w-0 items-center gap-3">
         {/* Avatar */}
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-r from-[#1e3a8a] to-[#3b82f6] text-white shadow-md shadow-blue-500/30">
           <span className="text-sm font-bold">
-            {getInitials(request.doctor?.user?.name ?? "Doctor")}
+            {getInitials(displayName)}
           </span>
         </div>
 
         <div className="min-w-0">
           <p className="truncate text-sm font-bold text-slate-800">
-            {request.doctor?.user?.name ?? "Unknown Doctor"}
+            {displayName.startsWith("Dr.") || displayName.startsWith("ডাঃ") || displayName.startsWith("डॉ.") ? displayName : `Dr. ${displayName}`}
           </p>
           {request.dayOfWeek && (
             <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-semibold text-slate-600">
@@ -320,9 +341,8 @@ function IncomingRow({
 }
 
 // ============================================================
-// Status Badge Component - Gradient Colors
+// Status Badge Component
 // ============================================================
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function StatusBadge({ status, t }: { status: string; t: any }) {
   if (status === "APPROVED") {
     return (
@@ -342,7 +362,6 @@ function StatusBadge({ status, t }: { status: string; t: any }) {
     );
   }
 
-  // PENDING or other
   return (
     <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-[#f59e0b] to-[#f97316] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white shadow-md shadow-orange-500/30">
       <Clock3 className="h-3.5 w-3.5" />
@@ -355,7 +374,8 @@ function StatusBadge({ status, t }: { status: string; t: any }) {
 // Utility Component
 // ============================================================
 function getInitials(name: string) {
-  return name
+  const cleanName = name.replace("Dr. ", "").replace("ডাঃ ", "").replace("डॉ. ", "");
+  return cleanName
     .split(" ")
     .filter(Boolean)
     .map((part) => part.charAt(0))

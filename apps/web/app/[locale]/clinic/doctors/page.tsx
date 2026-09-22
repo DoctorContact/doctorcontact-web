@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
-  Plus, X, Pencil, Search, Stethoscope, Mail, IndianRupee,
-  BriefcaseMedical, GraduationCap, UserRound, CheckCircle2,
+  Plus, X, Search, Stethoscope, Mail, IndianRupee,
+  GraduationCap, UserRound, CheckCircle2,
   Loader2, Award, Clock, Users, Trash2, Edit2, CalendarDays, Check,
-  BadgeCheck
+  BadgeCheck, Globe
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useClinicProfile, useClinicDoctors, useAddDoctor, useEditDoctor, type ClinicDoctor } from "@/lib/hooks/useClinic";
@@ -15,8 +15,18 @@ import { toast } from "react-hot-toast";
 const DAYS_OF_WEEK = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"];
 const WEEKS = [{ label: "1st", val: 1 }, { label: "2nd", val: 2 }, { label: "3rd", val: 3 }, { label: "4th", val: 4 }, { label: "Last", val: "LAST" }];
 
+// 🟢 Helper function to parse Multi-Language Name
+const parseMultiLangName = (rawName: string = "") => {
+  const parts = rawName.split(" | ");
+  return {
+    en: parts[0]?.trim() || rawName,
+    bn: parts[1]?.trim() || "",
+    hi: parts[2]?.trim() || "",
+  };
+};
+
 const EMPTY_ADD = {
-  name: "", email: "", password: "", phone: "", specialization: "", qualification: "", experience: "", fee: "",
+  nameEn: "", nameBn: "", nameHi: "", email: "", password: "", phone: "", specialization: "", qualification: "", experience: "", fee: "",
   startTime: "", endTime: "", capacity: "20",
   recurrenceType: "DAILY", recurrenceDays: [] as string[], recurrenceDate: "1", recurrenceWeek: "1", recurrenceWeekday: "SUNDAY", specificDate: ""
 };
@@ -36,6 +46,7 @@ function GradientCard({ children, className = "", gradient = PRIMARY_GRADIENT }:
 export default function ClinicDoctorsPage() {
   const tDoc = useTranslations("ClinicDoctors");
   const tNav = useTranslations("ClinicNav");
+  const locale = useLocale();
   
   const { data: clinic } = useClinicProfile();
   const { data: doctors, isLoading } = useClinicDoctors();
@@ -54,7 +65,7 @@ export default function ClinicDoctorsPage() {
     async function fetchSpecializations() {
       try {
         const res = await api.get("/specializations");
-        if (res.data?.success) setSpecializations(res.data.data.specializations);
+        if (res.data?.success) setSpecializations(res.data.data.specializations || res.data.data.items || res.data.data);
       } catch (err) {}
     }
     fetchSpecializations();
@@ -67,9 +78,12 @@ export default function ClinicDoctorsPage() {
       const res = await api.get(`/doctors/search-email?email=${form.email}`);
       const foundDoctor = res.data?.data?.doctors?.[0];
       if (foundDoctor) {
+        const pName = parseMultiLangName(foundDoctor.user?.name);
         setForm(prev => ({
           ...prev,
-          name: foundDoctor.user?.name || prev.name,
+          nameEn: pName.en || prev.nameEn,
+          nameBn: pName.bn || prev.nameBn,
+          nameHi: pName.hi || prev.nameHi,
           phone: foundDoctor.user?.phone || prev.phone,
           specialization: foundDoctor.specialization || prev.specialization,
           qualification: foundDoctor.qualification || prev.qualification,
@@ -97,31 +111,54 @@ export default function ClinicDoctorsPage() {
       return;
     }
 
-    // 🟢 1. STRICT DOCTOR PAYLOAD (Completely removed startTime so Zod validation passes)
+    if (!form.nameEn) {
+      setError("English Name is required.");
+      return;
+    }
+
+    const combinedName = `${form.nameEn.trim()} | ${form.nameBn.trim()} | ${form.nameHi.trim()}`;
+
+    // 🟢 Schedule Recurrence Logic
+    let recurrencePattern = {};
+    if (form.recurrenceType === "WEEKLY") {
+      recurrencePattern = { days: form.recurrenceDays };
+    }
+    if (form.recurrenceType === "MONTHLY_DATE") {
+      recurrencePattern = { date: Number(form.recurrenceDate) };
+    }
+    if (form.recurrenceType === "MONTHLY_WEEKDAY") {
+      recurrencePattern = {
+        week: form.recurrenceWeek === "LAST" ? "LAST" : Number(form.recurrenceWeek),
+        day: form.recurrenceWeekday,
+      };
+    }
+    if (form.recurrenceType === "SPECIFIC_DATE") {
+      recurrencePattern = { exactDate: form.specificDate };
+    }
+
+    // 🟢 FIXED: Send schedule fields along with the doctor payload
     const doctorPayload: any = {
-      name: form.name, 
-      email: form.email, 
-      // 🟢 FIXED: If password is empty, force it to 'undefined' so Zod ignores it completely
-      password: form.password ? form.password : undefined, 
+      name: combinedName,
+      email: form.email,
+      password: form.password ? form.password : undefined,
       phone: form.phone || undefined,
-      specialization: form.specialization || undefined, 
+      specialization: form.specialization || undefined,
       qualification: form.qualification || undefined,
-      experience: form.experience ? Number(form.experience) : undefined, 
+      experience: form.experience ? Number(form.experience) : undefined,
       fee: form.fee ? Number(form.fee) : undefined,
+
+      // Schedule fields
+      startTime: form.startTime,
+      endTime: form.endTime,
+      recurrenceType: form.recurrenceType,
+      recurrencePattern: recurrencePattern,
     };
 
     addDoctor.mutate(doctorPayload, {
-      onSuccess: async (res: any) => { 
-        // 🟢 2. GET THE NEW DOCTOR'S ID
+      onSuccess: async (res: any) => {
         const doctorId = res?.data?.data?.doctor?.id || res?.data?.data?.id || res?.data?.doctor?.id || res?.doctor?.id || res?.id;
-        
-        // 🟢 3. FIRE A SECOND API CALL TO CREATE THEIR SCHEDULE
+
         if (doctorId && clinic?.id) {
-          let recurrencePattern = {};
-          if (form.recurrenceType === "WEEKLY") recurrencePattern = { days: form.recurrenceDays };
-          if (form.recurrenceType === "MONTHLY_DATE") recurrencePattern = { date: Number(form.recurrenceDate) };
-          if (form.recurrenceType === "MONTHLY_WEEKDAY") recurrencePattern = { week: form.recurrenceWeek === "LAST" ? "LAST" : Number(form.recurrenceWeek), day: form.recurrenceWeekday };
-          if (form.recurrenceType === "SPECIFIC_DATE") recurrencePattern = { exactDate: form.specificDate };
 
           try {
             await api.post(`/doctors/${doctorId}/clinics/${clinic.id}/schedules`, {
@@ -131,22 +168,42 @@ export default function ClinicDoctorsPage() {
               recurrenceType: form.recurrenceType,
               recurrencePattern
             });
-          } catch (scheduleErr) {
-            console.error("Schedule setup failed", scheduleErr);
-            toast.error("Doctor added, but failed to save the initial schedule.");
+            toast.success("Doctor and Schedule added successfully!"); 
+          } catch (scheduleErr: any) {
+            // 🟢 409 Error Fix: Catch the conflict error gracefully
+            if (scheduleErr?.response?.status === 409) {
+               toast.success("Doctor added successfully! (Schedule was auto-configured)");
+            } else {
+               toast.error("Doctor added, but failed to save the initial schedule.");
+            }
           }
+        } else {
+          toast.success("Doctor added successfully!"); 
         }
 
         setForm(EMPTY_ADD); 
         setShowAdd(false); 
         setIsExistingDoctor(false); 
-        toast.success("Doctor and Schedule added successfully!"); 
       },
       onError: (err: any) => setError(err?.response?.data?.message || "Failed to add doctor"),
     });
   }
 
-  const filteredDoctors = doctors?.filter((doctor) => (doctor.user?.name?.toLowerCase() ?? "").includes(searchQuery.trim().toLowerCase())) ?? [];
+  const filteredDoctors = useMemo(() => {
+    const list = doctors || [];
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return list;
+
+    return list.filter((doctor) => {
+      const pName = parseMultiLangName(doctor.user?.name);
+      return (
+        pName.en.toLowerCase().includes(q) ||
+        pName.bn.toLowerCase().includes(q) ||
+        pName.hi.toLowerCase().includes(q) ||
+        doctor.specialization?.toLowerCase().includes(q)
+      );
+    });
+  }, [doctors, searchQuery]);
 
   return (
     <div className="space-y-4 pb-8 sm:space-y-6">
@@ -184,6 +241,12 @@ export default function ClinicDoctorsPage() {
               )}
             </div>
             
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 mb-4">
+              <Field label="English Name" required><input required type="text" value={form.nameEn} onChange={(e) => setForm({ ...form, nameEn: e.target.value })} className={inputClasses} placeholder="Dr. John Doe" /></Field>
+              <Field label="Bengali Name"><input type="text" value={form.nameBn} onChange={(e) => setForm({ ...form, nameBn: e.target.value })} className={inputClasses} placeholder="ডাঃ জন ডো" /></Field>
+              <Field label="Hindi Name"><input type="text" value={form.nameHi} onChange={(e) => setForm({ ...form, nameHi: e.target.value })} className={inputClasses} placeholder="डॉ. जॉन डो" /></Field>
+            </div>
+
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-6">
               <Field label={tDoc("email")} required>
                 <div className="relative">
@@ -191,13 +254,12 @@ export default function ClinicDoctorsPage() {
                   {isCheckingEmail && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-[#252a67]" />}
                 </div>
               </Field>
-              <Field label={tDoc("name")} required><input required type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={inputClasses} placeholder="Enter doctor's name" /></Field>
               <Field label={tDoc("password")} required><input required={!isExistingDoctor} type="password" minLength={6} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className={inputClasses} placeholder={isExistingDoctor ? "Leave blank to keep existing" : "Min 6 chars"} /></Field>
               <Field label={tDoc("phone")}><input type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className={inputClasses} placeholder="Phone number" /></Field>
               <Field label={tDoc("specialization")}>
                 <select value={form.specialization} onChange={(e) => setForm({ ...form, specialization: e.target.value })} className={inputClasses}>
                   <option value="">-- Select Category --</option>
-                  {specializations.map((spec) => (<option key={spec.id} value={spec.name}>{spec.name}</option>))}
+                  {specializations.map((spec) => (<option key={spec.id} value={spec.name}>{spec.nameEn || spec.name}</option>))}
                 </select>
               </Field>
               <Field label={tDoc("qualification")}><input type="text" value={form.qualification} onChange={(e) => setForm({ ...form, qualification: e.target.value })} className={inputClasses} placeholder="e.g. MBBS, MD" /></Field>
@@ -264,14 +326,14 @@ export default function ClinicDoctorsPage() {
       {!isLoading && doctors && doctors.length > 0 && (
         <div className="relative mt-2">
           <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
-          <input type="search" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search doctors by name..." className="w-full rounded-2xl border border-slate-200 bg-white py-4 pl-12 pr-4 text-sm font-medium outline-none focus:border-[#252a67] dark:bg-slate-900 dark:border-slate-800 dark:text-white" />
+          <input type="search" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search doctors by name (English, Bengali, Hindi)..." className="w-full rounded-2xl border border-slate-200 bg-white py-4 pl-12 pr-4 text-sm font-medium outline-none focus:border-[#252a67] dark:bg-slate-900 dark:border-slate-800 dark:text-white" />
         </div>
       )}
 
       {!isLoading && (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 mt-4">
           {filteredDoctors.map((doctor) => (
-            <DoctorRow key={doctor.id} doctor={doctor} clinicId={clinic?.id} specializations={specializations} />
+            <DoctorRow key={doctor.id} doctor={doctor} clinicId={clinic?.id} specializations={specializations} locale={locale} />
           ))}
         </div>
       )}
@@ -288,7 +350,7 @@ function Field({ label, children, required }: { label: string; children: React.R
   );
 }
 
-function DoctorRow({ doctor, clinicId, specializations }: { doctor: ClinicDoctor; clinicId?: string; specializations: any[] }) {
+function DoctorRow({ doctor, clinicId, specializations, locale }: { doctor: ClinicDoctor; clinicId?: string; specializations: any[], locale: string }) {
   const editDoctor = useEditDoctor();
   
   const [editing, setEditing] = useState(false);
@@ -301,7 +363,11 @@ function DoctorRow({ doctor, clinicId, specializations }: { doctor: ClinicDoctor
 
   const docAny = doctor as any;
   const photo = docAny.user?.avatar || docAny.profilePhoto || null;
-  const doctorName = doctor.user.name || "Doctor";
+  
+  const parsedName = parseMultiLangName(doctor.user.name);
+  const displayName = locale === "bn" && parsedName.bn ? parsedName.bn : 
+                      locale === "hi" && parsedName.hi ? parsedName.hi : 
+                      parsedName.en;
 
   function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -320,12 +386,20 @@ function DoctorRow({ doctor, clinicId, specializations }: { doctor: ClinicDoctor
       <div className="flex flex-col h-full p-4 sm:p-5">
         <div className="flex items-start gap-4 mb-4">
           <div className="relative h-[80px] w-[70px] shrink-0 overflow-hidden rounded-xl bg-slate-100 border border-slate-200">
-            {photo ? <img src={photo} alt={doctorName} className="h-full w-full object-cover object-top" /> : <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#252a67] to-[#14B8A6] text-white font-bold text-xl">{doctorName.substring(0, 2).toUpperCase()}</div>}
+            {photo ? <img src={photo} alt={displayName} className="h-full w-full object-cover object-top" /> : <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#252a67] to-[#14B8A6] text-white font-bold text-xl">{parsedName.en.replace("Dr. ", "").substring(0, 2).toUpperCase()}</div>}
             {doctor.user.isActive && <div className="absolute bottom-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-white shadow-md"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /></div>}
           </div>
           <div className="min-w-0 flex-1 pt-1">
-            <p className="truncate text-base font-extrabold text-slate-900 dark:text-white">Dr. {doctorName.replace("Dr. ", "")}</p>
+            <p className="truncate text-base font-extrabold text-slate-900 dark:text-white">
+              {displayName.startsWith("Dr.") || displayName.startsWith("ডাঃ") || displayName.startsWith("डॉ.") ? displayName : `Dr. ${displayName}`}
+            </p>
             <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 mt-0.5">{doctor.specialization || "General"}</p>
+            
+            <div className="mt-1 flex items-center gap-1.5 text-[9px] font-medium text-slate-400 dark:text-slate-500">
+              <Globe className="h-3 w-3" />
+              <span className="truncate">EN: {parsedName.en} {parsedName.bn && `• BN: ${parsedName.bn}`} {parsedName.hi && `• HI: ${parsedName.hi}`}</span>
+            </div>
+
             <div className="mt-1.5 flex items-center gap-1.5"><Mail className="h-3 w-3 text-slate-400" /><span className="text-[11px] font-medium text-slate-500 truncate">{doctor.user.email}</span></div>
           </div>
         </div>
@@ -356,7 +430,7 @@ function DoctorRow({ doctor, clinicId, specializations }: { doctor: ClinicDoctor
               <Field label="Specialization">
                 <select value={form.specialization} onChange={(e) => setForm({ ...form, specialization: e.target.value })} className={`${inputClasses} py-2.5`}>
                   <option value="">Select Category</option>
-                  {specializations.map((spec) => (<option key={spec.id} value={spec.name}>{spec.name}</option>))}
+                  {specializations.map((spec) => (<option key={spec.id} value={spec.name}>{spec.nameEn || spec.name}</option>))}
                 </select>
               </Field>
               <Field label="Qualification"><input value={form.qualification} onChange={(e) => setForm({ ...form, qualification: e.target.value })} className={`${inputClasses} py-2.5`} placeholder="MBBS, MD" /></Field>
@@ -542,13 +616,25 @@ function InlineScheduleEditor({ doctorId, clinicId }: { doctorId: string; clinic
       <div>
         <p className="text-[10px] font-extrabold uppercase text-slate-400 mb-3 tracking-wider flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5" /> Active Sessions</p>
         <div className="space-y-3 max-h-[260px] overflow-y-auto pr-1 custom-scrollbar">
-          {loading ? <div className="p-3 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto text-slate-400"/></div> : schedules.length === 0 ? <p className="text-xs text-slate-400 italic text-center p-4 border border-dashed rounded-xl">No sessions configured.</p> : schedules.map(s => (
-            <div key={s.id} className="flex flex-col border border-slate-200 rounded-xl p-3.5 bg-white shadow-sm hover:border-[#14B8A6]/40 transition-colors dark:bg-slate-800 dark:border-slate-700">
+          {loading ? <div className="p-3 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto text-slate-400"/></div> : schedules.length === 0 ? <p className="text-xs text-slate-400 italic text-center p-4 border border-dashed rounded-xl">No sessions configured.</p> : schedules.map((s, index) => (
+            
+            // 🟢 FIXED: "unique key prop" error. Used index as fallback.
+            <div key={s.id || `schedule-${index}`} className="flex flex-col border border-slate-200 rounded-xl p-3.5 bg-white shadow-sm hover:border-[#14B8A6]/40 transition-colors dark:bg-slate-800 dark:border-slate-700">
               <div className="flex justify-between items-start">
                 <div>
-                  <span className={`text-[9px] uppercase font-extrabold px-2 py-0.5 rounded tracking-wide ${s.recurrenceType === 'SPECIFIC_DATE' ? 'bg-amber-100 text-amber-700' : 'bg-blue-50 text-blue-600'}`}>
-                    {s.recurrenceType.replace("_", " ")}
-                  </span>
+                  
+                  {/* 🟢 FIXED: Displaying selected days for WEEKLY schedules */}
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <span className={`text-[9px] uppercase font-extrabold px-2 py-0.5 rounded tracking-wide ${s.recurrenceType === 'SPECIFIC_DATE' ? 'bg-amber-100 text-amber-700' : 'bg-blue-50 text-blue-600'}`}>
+                      {s.recurrenceType.replace("_", " ")}
+                    </span>
+                    {s.recurrenceType === "WEEKLY" && s.recurrencePattern?.days && (
+                      <span className="text-[10px] font-bold text-slate-500">
+                        ({s.recurrencePattern.days.map((d: string) => d.substring(0,3)).join(", ")})
+                      </span>
+                    )}
+                  </div>
+
                   <p className="text-sm font-extrabold text-slate-800 mt-2 dark:text-slate-200 flex items-center gap-1.5">
                     <Clock className="h-4 w-4 text-slate-400" /> {s.startTime} - {s.endTime}
                   </p>
