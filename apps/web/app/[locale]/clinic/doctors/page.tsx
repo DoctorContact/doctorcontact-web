@@ -708,4 +708,4 @@ function InlineScheduleEditor({ doctorId, clinicId }: { doctorId: string; clinic
       </div>
     </div>
   );
-}
+} 
