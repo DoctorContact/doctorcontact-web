@@ -5,7 +5,8 @@ import {
   Plus, X, Search, Stethoscope, Mail, IndianRupee,
   GraduationCap, UserRound, CheckCircle2,
   Loader2, Award, Clock, Users, Trash2, Edit2, CalendarDays, Check,
-  BadgeCheck, Globe, Activity
+  BadgeCheck, Globe, Activity,
+  Globe2, PhoneOff 
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useClinicProfile, useClinicDoctors, useAddDoctor, useEditDoctor, type ClinicDoctor } from "@/lib/hooks/useClinic";
@@ -15,7 +16,6 @@ import { toast } from "react-hot-toast";
 const DAYS_OF_WEEK = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"];
 const WEEKS = [{ label: "1st", val: 1 }, { label: "2nd", val: 2 }, { label: "3rd", val: 3 }, { label: "4th", val: 4 }, { label: "Last", val: "LAST" }];
 
-// 🟢 Helper function to parse Multi-Language Name
 const parseMultiLangName = (rawName: string = "") => {
   const parts = rawName.split(" | ");
   return {
@@ -27,7 +27,7 @@ const parseMultiLangName = (rawName: string = "") => {
 
 const EMPTY_ADD = {
   nameEn: "", nameBn: "", nameHi: "", email: "", password: "", phone: "", 
-  medicalSystem: "ALLOPATHY", // 🟢 NEW FIELD
+  medicalSystem: "ALLOPATHY", 
   specialization: "", qualification: "", experience: "", fee: "",
   startTime: "", endTime: "", capacity: "20",
   recurrenceType: "DAILY", recurrenceDays: [] as string[], recurrenceDate: "1", recurrenceWeek: "1", recurrenceWeekday: "SUNDAY", specificDate: ""
@@ -51,7 +51,7 @@ export default function ClinicDoctorsPage() {
   const locale = useLocale();
   
   const { data: clinic } = useClinicProfile();
-  const { data: doctors, isLoading } = useClinicDoctors();
+  const { data: doctors, isLoading, refetch } = useClinicDoctors();
   const addDoctor = useAddDoctor();
 
   const [showAdd, setShowAdd] = useState(false);
@@ -87,7 +87,7 @@ export default function ClinicDoctorsPage() {
           nameBn: pName.bn || prev.nameBn,
           nameHi: pName.hi || prev.nameHi,
           phone: foundDoctor.user?.phone || prev.phone,
-          medicalSystem: foundDoctor.medicalSystem || prev.medicalSystem, // 🟢 Handle existing system
+          medicalSystem: foundDoctor.medicalSystem || prev.medicalSystem, 
           specialization: foundDoctor.specialization || prev.specialization,
           qualification: foundDoctor.qualification || prev.qualification,
           experience: foundDoctor.experience ? String(foundDoctor.experience) : prev.experience,
@@ -122,28 +122,17 @@ export default function ClinicDoctorsPage() {
     const combinedName = `${form.nameEn.trim()} | ${form.nameBn.trim()} | ${form.nameHi.trim()}`;
 
     let recurrencePattern = {};
-    if (form.recurrenceType === "WEEKLY") {
-      recurrencePattern = { days: form.recurrenceDays };
-    }
-    if (form.recurrenceType === "MONTHLY_DATE") {
-      recurrencePattern = { date: Number(form.recurrenceDate) };
-    }
-    if (form.recurrenceType === "MONTHLY_WEEKDAY") {
-      recurrencePattern = {
-        week: form.recurrenceWeek === "LAST" ? "LAST" : Number(form.recurrenceWeek),
-        day: form.recurrenceWeekday,
-      };
-    }
-    if (form.recurrenceType === "SPECIFIC_DATE") {
-      recurrencePattern = { exactDate: form.specificDate };
-    }
+    if (form.recurrenceType === "WEEKLY") recurrencePattern = { days: form.recurrenceDays };
+    if (form.recurrenceType === "MONTHLY_DATE") recurrencePattern = { date: Number(form.recurrenceDate) };
+    if (form.recurrenceType === "MONTHLY_WEEKDAY") recurrencePattern = { week: form.recurrenceWeek === "LAST" ? "LAST" : Number(form.recurrenceWeek), day: form.recurrenceWeekday };
+    if (form.recurrenceType === "SPECIFIC_DATE") recurrencePattern = { exactDate: form.specificDate };
 
     const doctorPayload: any = {
       name: combinedName,
       email: form.email,
       password: form.password ? form.password : undefined,
       phone: form.phone || undefined,
-      medicalSystem: form.medicalSystem, // 🟢 Send Medical System
+      medicalSystem: form.medicalSystem,
       specialization: form.specialization || undefined,
       qualification: form.qualification || undefined,
       experience: form.experience ? Number(form.experience) : undefined,
@@ -182,6 +171,7 @@ export default function ClinicDoctorsPage() {
         setForm(EMPTY_ADD); 
         setShowAdd(false); 
         setIsExistingDoctor(false); 
+        refetch();
       },
       onError: (err: any) => setError(err?.response?.data?.message || "Failed to add doctor"),
     });
@@ -255,7 +245,6 @@ export default function ClinicDoctorsPage() {
               <Field label={tDoc("password")} required><input required={!isExistingDoctor} type="password" minLength={6} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className={inputClasses} placeholder={isExistingDoctor ? "Leave blank to keep existing" : "Min 6 chars"} /></Field>
               <Field label={tDoc("phone")}><input type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className={inputClasses} placeholder="Phone number" /></Field>
               
-              {/* 🟢 NEW FIELD: Medical System */}
               <Field label="Medical System" required>
                 <select value={form.medicalSystem} onChange={(e) => setForm({ ...form, medicalSystem: e.target.value })} className={inputClasses}>
                   <option value="ALLOPATHY">Allopathy</option>
@@ -341,7 +330,7 @@ export default function ClinicDoctorsPage() {
       {!isLoading && (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 mt-4">
           {filteredDoctors.map((doctor) => (
-            <DoctorRow key={doctor.id} doctor={doctor} clinicId={clinic?.id} specializations={specializations} locale={locale} />
+            <DoctorRow key={doctor.id} doctor={doctor} clinicId={clinic?.id} specializations={specializations} locale={locale} refetch={refetch} />
           ))}
         </div>
       )}
@@ -358,13 +347,16 @@ function Field({ label, children, required }: { label: string; children: React.R
   );
 }
 
-function DoctorRow({ doctor, clinicId, specializations, locale }: { doctor: ClinicDoctor; clinicId?: string; specializations: any[], locale: string }) {
+function DoctorRow({ doctor, clinicId, specializations, locale, refetch }: { doctor: ClinicDoctor; clinicId?: string; specializations: any[], locale: string, refetch: () => void }) {
   const editDoctor = useEditDoctor();
   
   const [editing, setEditing] = useState(false);
   const [showSchedules, setShowSchedules] = useState(false); 
 
-  // 🟢 Edit form includes medicalSystem
+  const initialOnlineStatus = (doctor as any).onlineBookingEnabled ?? true;
+  const [isOnlineEnabled, setIsOnlineEnabled] = useState(initialOnlineStatus);
+  const [isToggling, setIsToggling] = useState(false);
+
   const [form, setForm] = useState({
     medicalSystem: (doctor as any).medicalSystem ?? "ALLOPATHY",
     specialization: doctor.specialization ?? "", qualification: doctor.qualification ?? "",
@@ -383,14 +375,31 @@ function DoctorRow({ doctor, clinicId, specializations, locale }: { doctor: Clin
     e.preventDefault();
     const payload: any = {
       doctorId: doctor.id,
-      medicalSystem: form.medicalSystem, // 🟢 Save Medical System
+      medicalSystem: form.medicalSystem, 
       specialization: form.specialization || undefined,
       qualification: form.qualification || undefined,
       experience: form.experience ? Number(form.experience) : undefined,
       fee: form.fee ? Number(form.fee) : undefined,
     };
-    editDoctor.mutate(payload, { onSuccess: () => { setEditing(false); toast.success("Profile updated"); } });
+    editDoctor.mutate(payload, { onSuccess: () => { setEditing(false); toast.success("Profile updated"); refetch(); } });
   }
+
+  const handleToggleOnlineBooking = async () => {
+    if (!clinicId) return;
+    setIsToggling(true);
+    const newStatus = !isOnlineEnabled;
+    try {
+      // 🟢 FIX: Corrected URL from `/clinics` to `/clinic`
+      await api.patch(`/clinic/doctors/${doctor.id}/online-booking`, { onlineBookingEnabled: newStatus });
+      setIsOnlineEnabled(newStatus);
+      toast.success(newStatus ? "Online Booking Enabled" : "Online Booking Disabled");
+      refetch();
+    } catch (error) {
+      toast.error("Failed to update booking status");
+    } finally {
+      setIsToggling(false);
+    }
+  };
 
   return (
     <GradientCard className="flex flex-col h-full">
@@ -405,7 +414,6 @@ function DoctorRow({ doctor, clinicId, specializations, locale }: { doctor: Clin
               {displayName.startsWith("Dr.") || displayName.startsWith("ডাঃ") || displayName.startsWith("डॉ.") ? displayName : `Dr. ${displayName}`}
             </p>
             
-            {/* 🟢 Display Medical System badge */}
             <div className="mt-1 flex items-center gap-2">
               <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">{(doctor as any).medicalSystem}</span>
               <span className="text-slate-300">•</span>
@@ -419,6 +427,24 @@ function DoctorRow({ doctor, clinicId, specializations, locale }: { doctor: Clin
 
             <div className="mt-1.5 flex items-center gap-1.5"><Mail className="h-3 w-3 text-slate-400" /><span className="text-[11px] font-medium text-slate-500 truncate">{doctor.user.email}</span></div>
           </div>
+        </div>
+
+        <div className="mb-4 flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-2.5 dark:border-slate-700 dark:bg-slate-800/50">
+          <div className="flex items-center gap-2">
+            {isOnlineEnabled ? <Globe2 className="h-4 w-4 text-emerald-500" /> : <PhoneOff className="h-4 w-4 text-rose-500" />}
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">Online Booking</p>
+              <p className="text-[9px] font-medium text-slate-400">{isOnlineEnabled ? "Accepting appts online" : "Booking by call only"}</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleToggleOnlineBooking}
+            disabled={isToggling}
+            className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none ${isOnlineEnabled ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'} ${isToggling ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+          >
+            <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${isOnlineEnabled ? 'translate-x-4' : 'translate-x-1'}`} />
+          </button>
         </div>
 
         <div className="grid grid-cols-2 gap-2 mb-4 border-b border-slate-100 pb-4 dark:border-slate-800">
@@ -444,7 +470,6 @@ function DoctorRow({ doctor, clinicId, specializations, locale }: { doctor: Clin
         {editing && (
           <form onSubmit={handleSave} className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
             <div className="grid grid-cols-2 gap-3">
-              {/* 🟢 Add Medical System to Edit Form */}
               <Field label="Medical System">
                 <select value={form.medicalSystem} onChange={(e) => setForm({ ...form, medicalSystem: e.target.value })} className={`${inputClasses} py-2.5`}>
                   <option value="ALLOPATHY">Allopathy</option>
