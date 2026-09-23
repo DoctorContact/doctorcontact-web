@@ -402,7 +402,9 @@ function PeriodReportCard({ doctorId, doctorNameDisplay }: { doctorId?: string; 
     
     // Clean names to be safe for filenames
     const safeDocName = doctorNameDisplay.replace(/[^\w\s-]/g, "").replace(/\s+/g, "_");
-    const filename = `Report_${safeDocName}_${datePart}.${format}`;
+    const extension = format === "excel" ? "xlsx" : "pdf";
+
+const filename = `Report_${safeDocName}_${datePart}.${extension}`;
 
     download.mutate({
       ...currentParams(),

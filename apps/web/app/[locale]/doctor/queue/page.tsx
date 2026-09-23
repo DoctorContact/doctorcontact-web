@@ -48,7 +48,7 @@ export default function DoctorQueuePage() {
     const accepted = [
       ...(receivedRequests || []),
       ...(sentRequests || []),
-    ].filter((r) => r.status === "ACCEPTED");
+    ].filter((r) => r.status === "APPROVED");
 
     const map = new Map<
       string,

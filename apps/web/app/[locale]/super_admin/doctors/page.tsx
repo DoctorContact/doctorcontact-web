@@ -44,11 +44,10 @@ export default function AdminDoctorsPage() {
   const [pendingActionDoctor, setPendingActionDoctor] = useState<any>(null);
   const [actionType, setActionType] = useState<"verify" | "unverify" | "delete" | null>(null);
 
-  // 🟢 1. Fetch ALL Doctors
+  // 1. Fetch ALL Doctors
   const { data: allDoctors = [], isLoading, isFetching, refetch } = useQuery({
     queryKey: ["adminAllDoctors"],
     queryFn: async () => {
-      // Make sure this endpoint calls listAllDoctors in the backend
       const res = await api.get("/admin/doctors");
       return res.data?.data?.doctors || [];
     },
@@ -88,11 +87,12 @@ export default function AdminDoctorsPage() {
   const [formData, setFormData] = useState({
     nameEn: "", nameBn: "", nameHi: "",
     phone: "", email: "", password: "",
+    medicalSystem: "ALLOPATHY", // 🟢 NEW: Added Medical System
     specializationId: "", specializationName: "", city: "", 
     qualification: "", experience: "", fee: "",
   });
 
-  // 🟢 Filter Logic (Search across multiple fields)
+  // Filter Logic
   const filteredDoctors = useMemo(() => {
     return allDoctors.filter((doc: any) => {
       if (!searchQuery) return true;
@@ -120,6 +120,7 @@ export default function AdminDoctorsPage() {
       setIsAddModalOpen(false);
       setFormData({
         nameEn: "", nameBn: "", nameHi: "", phone: "", email: "", password: "",
+        medicalSystem: "ALLOPATHY", // 🟢 Reset state
         specializationId: "", specializationName: "", city: "", qualification: "", experience: "", fee: "",
       });
       refetch(); 
@@ -168,6 +169,7 @@ export default function AdminDoctorsPage() {
     const payload: any = {
       name: combinedName,
       password: formData.password,
+      medicalSystem: formData.medicalSystem, // 🟢 Added to Payload
       qualification: formData.qualification,
       experience: formData.experience ? Number(formData.experience) : 0,
       fee: formData.fee ? Number(formData.fee) : 0,
@@ -268,7 +270,6 @@ export default function AdminDoctorsPage() {
           ) : (
             filteredDoctors.map((doc: any) => {
               const parsedName = parseMultiLangName(doc.user?.name);
-              // Set main display name based on current locale
               const mainName = locale === "bn" && parsedName.bn ? parsedName.bn : 
                                locale === "hi" && parsedName.hi ? parsedName.hi : 
                                parsedName.en;
@@ -435,7 +436,20 @@ export default function AdminDoctorsPage() {
                 </div>
               </div>
 
+              {/* 🟢 NEW ROW: Medical System & Location & Qualification */}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div>
+                  <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500">Medical System *</label>
+                  <select 
+                    value={formData.medicalSystem} 
+                    onChange={(e) => setFormData({...formData, medicalSystem: e.target.value})} 
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none transition dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  >
+                    <option value="ALLOPATHY">Allopathy</option>
+                    <option value="HOMEOPATHY">Homeopathy</option>
+                    <option value="AYURVEDA">Ayurveda</option>
+                  </select>
+                </div>
                 <div>
                   <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500">Location (City)</label>
                   <select value={formData.city} onChange={(e) => setFormData({...formData, city: e.target.value})} className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none transition dark:border-slate-700 dark:bg-slate-800 dark:text-white">
@@ -465,7 +479,8 @@ export default function AdminDoctorsPage() {
         </div>
       )}
 
-      {/* Confirmation Modal for Verify/Unverify/Delete */}
+      {/* Confirmation Modal ... */}
+      {/* (Rest of the component remains exactly as it was) */}
       {pendingActionDoctor && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-xs">
           <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-5 shadow-xl transition-all dark:border-slate-800 dark:bg-slate-900">

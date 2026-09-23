@@ -140,7 +140,7 @@ export type Doctor = {
   clinic: { id: string; clinicName: string; city: string | null; address: string | null };
 };
 
-export type DoctorRequestStatus = "PENDING" | "ACCEPTED" | "REJECTED";
+export type DoctorRequestStatus = "PENDING" | "APPROVED" | "REJECTED";
 
 export type DoctorRequest = {
   id: string;

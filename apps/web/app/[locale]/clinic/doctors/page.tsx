@@ -5,7 +5,7 @@ import {
   Plus, X, Search, Stethoscope, Mail, IndianRupee,
   GraduationCap, UserRound, CheckCircle2,
   Loader2, Award, Clock, Users, Trash2, Edit2, CalendarDays, Check,
-  BadgeCheck, Globe
+  BadgeCheck, Globe, Activity
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useClinicProfile, useClinicDoctors, useAddDoctor, useEditDoctor, type ClinicDoctor } from "@/lib/hooks/useClinic";
@@ -26,7 +26,9 @@ const parseMultiLangName = (rawName: string = "") => {
 };
 
 const EMPTY_ADD = {
-  nameEn: "", nameBn: "", nameHi: "", email: "", password: "", phone: "", specialization: "", qualification: "", experience: "", fee: "",
+  nameEn: "", nameBn: "", nameHi: "", email: "", password: "", phone: "", 
+  medicalSystem: "ALLOPATHY", // 🟢 NEW FIELD
+  specialization: "", qualification: "", experience: "", fee: "",
   startTime: "", endTime: "", capacity: "20",
   recurrenceType: "DAILY", recurrenceDays: [] as string[], recurrenceDate: "1", recurrenceWeek: "1", recurrenceWeekday: "SUNDAY", specificDate: ""
 };
@@ -85,6 +87,7 @@ export default function ClinicDoctorsPage() {
           nameBn: pName.bn || prev.nameBn,
           nameHi: pName.hi || prev.nameHi,
           phone: foundDoctor.user?.phone || prev.phone,
+          medicalSystem: foundDoctor.medicalSystem || prev.medicalSystem, // 🟢 Handle existing system
           specialization: foundDoctor.specialization || prev.specialization,
           qualification: foundDoctor.qualification || prev.qualification,
           experience: foundDoctor.experience ? String(foundDoctor.experience) : prev.experience,
@@ -118,7 +121,6 @@ export default function ClinicDoctorsPage() {
 
     const combinedName = `${form.nameEn.trim()} | ${form.nameBn.trim()} | ${form.nameHi.trim()}`;
 
-    // 🟢 Schedule Recurrence Logic
     let recurrencePattern = {};
     if (form.recurrenceType === "WEEKLY") {
       recurrencePattern = { days: form.recurrenceDays };
@@ -136,18 +138,16 @@ export default function ClinicDoctorsPage() {
       recurrencePattern = { exactDate: form.specificDate };
     }
 
-    // 🟢 FIXED: Send schedule fields along with the doctor payload
     const doctorPayload: any = {
       name: combinedName,
       email: form.email,
       password: form.password ? form.password : undefined,
       phone: form.phone || undefined,
+      medicalSystem: form.medicalSystem, // 🟢 Send Medical System
       specialization: form.specialization || undefined,
       qualification: form.qualification || undefined,
       experience: form.experience ? Number(form.experience) : undefined,
       fee: form.fee ? Number(form.fee) : undefined,
-
-      // Schedule fields
       startTime: form.startTime,
       endTime: form.endTime,
       recurrenceType: form.recurrenceType,
@@ -159,7 +159,6 @@ export default function ClinicDoctorsPage() {
         const doctorId = res?.data?.data?.doctor?.id || res?.data?.data?.id || res?.data?.doctor?.id || res?.doctor?.id || res?.id;
 
         if (doctorId && clinic?.id) {
-
           try {
             await api.post(`/doctors/${doctorId}/clinics/${clinic.id}/schedules`, {
               startTime: form.startTime,
@@ -170,7 +169,6 @@ export default function ClinicDoctorsPage() {
             });
             toast.success("Doctor and Schedule added successfully!"); 
           } catch (scheduleErr: any) {
-            // 🟢 409 Error Fix: Catch the conflict error gracefully
             if (scheduleErr?.response?.status === 409) {
                toast.success("Doctor added successfully! (Schedule was auto-configured)");
             } else {
@@ -247,7 +245,7 @@ export default function ClinicDoctorsPage() {
               <Field label="Hindi Name"><input type="text" value={form.nameHi} onChange={(e) => setForm({ ...form, nameHi: e.target.value })} className={inputClasses} placeholder="डॉ. जॉन डो" /></Field>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-6">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
               <Field label={tDoc("email")} required>
                 <div className="relative">
                   <input required type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} onBlur={handleEmailBlur} className={`${inputClasses} ${isExistingDoctor ? "border-emerald-300 bg-emerald-50 focus:border-emerald-500" : ""}`} placeholder="doctor@example.com" />
@@ -256,6 +254,16 @@ export default function ClinicDoctorsPage() {
               </Field>
               <Field label={tDoc("password")} required><input required={!isExistingDoctor} type="password" minLength={6} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className={inputClasses} placeholder={isExistingDoctor ? "Leave blank to keep existing" : "Min 6 chars"} /></Field>
               <Field label={tDoc("phone")}><input type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className={inputClasses} placeholder="Phone number" /></Field>
+              
+              {/* 🟢 NEW FIELD: Medical System */}
+              <Field label="Medical System" required>
+                <select value={form.medicalSystem} onChange={(e) => setForm({ ...form, medicalSystem: e.target.value })} className={inputClasses}>
+                  <option value="ALLOPATHY">Allopathy</option>
+                  <option value="HOMEOPATHY">Homeopathy</option>
+                  <option value="AYURVEDA">Ayurveda</option>
+                </select>
+              </Field>
+
               <Field label={tDoc("specialization")}>
                 <select value={form.specialization} onChange={(e) => setForm({ ...form, specialization: e.target.value })} className={inputClasses}>
                   <option value="">-- Select Category --</option>
@@ -356,7 +364,9 @@ function DoctorRow({ doctor, clinicId, specializations, locale }: { doctor: Clin
   const [editing, setEditing] = useState(false);
   const [showSchedules, setShowSchedules] = useState(false); 
 
+  // 🟢 Edit form includes medicalSystem
   const [form, setForm] = useState({
+    medicalSystem: (doctor as any).medicalSystem ?? "ALLOPATHY",
     specialization: doctor.specialization ?? "", qualification: doctor.qualification ?? "",
     experience: doctor.experience?.toString() ?? "", fee: doctor.fee?.toString() ?? "",
   });
@@ -373,6 +383,7 @@ function DoctorRow({ doctor, clinicId, specializations, locale }: { doctor: Clin
     e.preventDefault();
     const payload: any = {
       doctorId: doctor.id,
+      medicalSystem: form.medicalSystem, // 🟢 Save Medical System
       specialization: form.specialization || undefined,
       qualification: form.qualification || undefined,
       experience: form.experience ? Number(form.experience) : undefined,
@@ -393,9 +404,15 @@ function DoctorRow({ doctor, clinicId, specializations, locale }: { doctor: Clin
             <p className="truncate text-base font-extrabold text-slate-900 dark:text-white">
               {displayName.startsWith("Dr.") || displayName.startsWith("ডাঃ") || displayName.startsWith("डॉ.") ? displayName : `Dr. ${displayName}`}
             </p>
-            <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 mt-0.5">{doctor.specialization || "General"}</p>
             
-            <div className="mt-1 flex items-center gap-1.5 text-[9px] font-medium text-slate-400 dark:text-slate-500">
+            {/* 🟢 Display Medical System badge */}
+            <div className="mt-1 flex items-center gap-2">
+              <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">{(doctor as any).medicalSystem}</span>
+              <span className="text-slate-300">•</span>
+              <span className="text-xs font-medium text-slate-500">{doctor.specialization || "General"}</span>
+            </div>
+            
+            <div className="mt-1.5 flex items-center gap-1.5 text-[9px] font-medium text-slate-400 dark:text-slate-500">
               <Globe className="h-3 w-3" />
               <span className="truncate">EN: {parsedName.en} {parsedName.bn && `• BN: ${parsedName.bn}`} {parsedName.hi && `• HI: ${parsedName.hi}`}</span>
             </div>
@@ -427,17 +444,25 @@ function DoctorRow({ doctor, clinicId, specializations, locale }: { doctor: Clin
         {editing && (
           <form onSubmit={handleSave} className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
             <div className="grid grid-cols-2 gap-3">
+              {/* 🟢 Add Medical System to Edit Form */}
+              <Field label="Medical System">
+                <select value={form.medicalSystem} onChange={(e) => setForm({ ...form, medicalSystem: e.target.value })} className={`${inputClasses} py-2.5`}>
+                  <option value="ALLOPATHY">Allopathy</option>
+                  <option value="HOMEOPATHY">Homeopathy</option>
+                  <option value="AYURVEDA">Ayurveda</option>
+                </select>
+              </Field>
               <Field label="Specialization">
                 <select value={form.specialization} onChange={(e) => setForm({ ...form, specialization: e.target.value })} className={`${inputClasses} py-2.5`}>
                   <option value="">Select Category</option>
                   {specializations.map((spec) => (<option key={spec.id} value={spec.name}>{spec.nameEn || spec.name}</option>))}
                 </select>
               </Field>
-              <Field label="Qualification"><input value={form.qualification} onChange={(e) => setForm({ ...form, qualification: e.target.value })} className={`${inputClasses} py-2.5`} placeholder="MBBS, MD" /></Field>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Experience (Yrs)"><input type="number" value={form.experience} onChange={(e) => setForm({ ...form, experience: e.target.value })} className={`${inputClasses} py-2.5`} /></Field>
-              <Field label="Fee (₹)"><div className="relative"><IndianRupee className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" /><input type="number" value={form.fee} onChange={(e) => setForm({ ...form, fee: e.target.value })} className={`${inputClasses} pl-8 py-2.5`} /></div></Field>
+            <div className="grid grid-cols-3 gap-3">
+              <Field label="Qualification"><input value={form.qualification} onChange={(e) => setForm({ ...form, qualification: e.target.value })} className={`${inputClasses} py-2.5`} placeholder="MBBS" /></Field>
+              <Field label="Exp (Yrs)"><input type="number" value={form.experience} onChange={(e) => setForm({ ...form, experience: e.target.value })} className={`${inputClasses} py-2.5`} /></Field>
+              <Field label="Fee (₹)"><input type="number" value={form.fee} onChange={(e) => setForm({ ...form, fee: e.target.value })} className={`${inputClasses} py-2.5`} /></Field>
             </div>
             <button type="submit" disabled={editDoctor.isPending} className="w-full rounded-xl bg-[#252a67] py-3 text-sm font-bold text-white shadow-md hover:bg-[#1e2251] transition-all flex justify-center items-center gap-2">
               {editDoctor.isPending ? <Loader2 className="h-4 w-4 animate-spin"/> : <CheckCircle2 className="h-4 w-4"/>} Save Profile
@@ -617,13 +642,9 @@ function InlineScheduleEditor({ doctorId, clinicId }: { doctorId: string; clinic
         <p className="text-[10px] font-extrabold uppercase text-slate-400 mb-3 tracking-wider flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5" /> Active Sessions</p>
         <div className="space-y-3 max-h-[260px] overflow-y-auto pr-1 custom-scrollbar">
           {loading ? <div className="p-3 text-center"><Loader2 className="h-5 w-5 animate-spin mx-auto text-slate-400"/></div> : schedules.length === 0 ? <p className="text-xs text-slate-400 italic text-center p-4 border border-dashed rounded-xl">No sessions configured.</p> : schedules.map((s, index) => (
-            
-            // 🟢 FIXED: "unique key prop" error. Used index as fallback.
             <div key={s.id || `schedule-${index}`} className="flex flex-col border border-slate-200 rounded-xl p-3.5 bg-white shadow-sm hover:border-[#14B8A6]/40 transition-colors dark:bg-slate-800 dark:border-slate-700">
               <div className="flex justify-between items-start">
                 <div>
-                  
-                  {/* 🟢 FIXED: Displaying selected days for WEEKLY schedules */}
                   <div className="flex items-center gap-2 flex-wrap mb-1">
                     <span className={`text-[9px] uppercase font-extrabold px-2 py-0.5 rounded tracking-wide ${s.recurrenceType === 'SPECIFIC_DATE' ? 'bg-amber-100 text-amber-700' : 'bg-blue-50 text-blue-600'}`}>
                       {s.recurrenceType.replace("_", " ")}
@@ -634,7 +655,6 @@ function InlineScheduleEditor({ doctorId, clinicId }: { doctorId: string; clinic
                       </span>
                     )}
                   </div>
-
                   <p className="text-sm font-extrabold text-slate-800 mt-2 dark:text-slate-200 flex items-center gap-1.5">
                     <Clock className="h-4 w-4 text-slate-400" /> {s.startTime} - {s.endTime}
                   </p>

@@ -31,10 +31,12 @@ export function RequestCard({
   };
 
   const isPending = request.status === "PENDING";
+  
+  // 🟢 FIX: Changed "ACCEPTED" to "APPROVED" to match the database Enum
   const cardVariant =
     request.status === "PENDING"
       ? "indigo"
-      : request.status === "ACCEPTED"
+      : request.status === "APPROVED" 
       ? "emerald"
       : request.status === "REJECTED"
       ? "rose"
