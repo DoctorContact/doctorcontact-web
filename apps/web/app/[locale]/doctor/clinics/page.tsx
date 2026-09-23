@@ -71,7 +71,7 @@ export default function DoctorClinicsPage() {
           requestType: req._type,
         };
 
-        if (req.status === "ACCEPTED") {
+        if (req.status === "APPROVED") {
           if (!acceptedMap.has(cId)) {
             acceptedMap.set(cId, item);
           }
@@ -122,8 +122,8 @@ export default function DoctorClinicsPage() {
     sentRequests.filter((r) => r.status === "PENDING").length;
 
   const acceptedCount =
-    receivedRequests.filter((r) => r.status === "ACCEPTED").length +
-    sentRequests.filter((r) => r.status === "ACCEPTED").length;
+    receivedRequests.filter((r) => r.status === "APPROVED").length +
+    sentRequests.filter((r) => r.status === "APPROVED").length;
 
   return (
     <div className="space-y-6">

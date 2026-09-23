@@ -27,7 +27,7 @@ interface ClinicCardProps {
 export function ClinicCard({ clinic }: ClinicCardProps) {
   const clinicName = clinic.clinicName || "Medical Clinic";
   const location = [clinic.address, clinic.city].filter(Boolean).join(", ");
-  const isAccepted = clinic.status === "ACCEPTED";
+  const isAccepted = clinic.status === "APPROVED";
   const cardVariant = isAccepted ? "cyan" : clinic.status === "PENDING" ? "amber" : "slate";
 
   return (

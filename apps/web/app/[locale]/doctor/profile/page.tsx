@@ -51,7 +51,7 @@ export default function DoctorProfilePage() {
   } = useMemo(() => {
     const allRequests = [...receivedRequests, ...sentRequests];
 
-    const accepted = allRequests.filter((r) => r.status === "ACCEPTED");
+    const accepted = allRequests.filter((r) => r.status === "APPROVED");
     const pending = allRequests.filter((r) => r.status === "PENDING");
 
     // Extract unique active clinic IDs

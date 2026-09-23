@@ -8,7 +8,7 @@ interface ClinicStatusBadgeProps {
 }
 
 export function ClinicStatusBadge({ status }: ClinicStatusBadgeProps) {
-  if (status === "ACCEPTED") {
+  if (status === "APPROVED") {
     return (
       <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 ring-1 ring-emerald-600/20 dark:bg-emerald-950/40 dark:text-emerald-400 dark:ring-emerald-500/30">
         <CheckCircle2 className="h-3.5 w-3.5" />
