@@ -245,7 +245,7 @@ export default function Header() {
 
           {/* Ambulance visible directly */}
           <Link
-            href="/#ambulance"
+            href="/ambulance"
             className="text-sm font-medium text-slate-700 hover:text-[#1C63E7] transition-colors dark:text-ink-700 dark:hover:text-[var(--color-primary-text)]"
           >
             Ambulance
@@ -528,14 +528,14 @@ export default function Header() {
               Treatments
             </Link>
             <Link
-              href="/#labs"
+              href="/labs"
               onClick={() => setOpen(false)}
               className="block rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
             >
               Labs
             </Link>
             <Link
-              href="/#ambulance"
+              href="/ambulance"
               onClick={() => setOpen(false)}
               className="block rounded-lg px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
             >
