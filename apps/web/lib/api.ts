@@ -87,6 +87,9 @@ function handleLogoutAndRedirect(error: any) {
           currentPath.includes("/doctors") || 
           currentPath.includes("/privacy") || 
           currentPath.includes("/clinics")  ||
+          currentPath.includes("/labs")  ||
+          currentPath.includes("/ambulances")  || //terms
+          currentPath.includes("/terms")  ||
           currentPath.includes("/account-deletion");
 
         if (!isPublicRoute) {

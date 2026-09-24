@@ -5,8 +5,7 @@ import {
   Plus, X, Search, Stethoscope, Mail, IndianRupee,
   GraduationCap, UserRound, CheckCircle2,
   Loader2, Award, Clock, Users, Trash2, Edit2, CalendarDays, Check,
-  BadgeCheck, Globe, Activity,
-  Globe2, PhoneOff 
+  BadgeCheck, Globe, Globe2, PhoneOff 
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useClinicProfile, useClinicDoctors, useAddDoctor, useEditDoctor, type ClinicDoctor } from "@/lib/hooks/useClinic";
@@ -352,6 +351,7 @@ function DoctorRow({ doctor, clinicId, specializations, locale, refetch }: { doc
   
   const [editing, setEditing] = useState(false);
   const [showSchedules, setShowSchedules] = useState(false); 
+  const [isRemoving, setIsRemoving] = useState(false); // 🟢 Added state for removing
 
   const initialOnlineStatus = (doctor as any).onlineBookingEnabled ?? true;
   const [isOnlineEnabled, setIsOnlineEnabled] = useState(initialOnlineStatus);
@@ -389,7 +389,6 @@ function DoctorRow({ doctor, clinicId, specializations, locale, refetch }: { doc
     setIsToggling(true);
     const newStatus = !isOnlineEnabled;
     try {
-      // 🟢 FIX: Corrected URL from `/clinics` to `/clinic`
       await api.patch(`/clinic/doctors/${doctor.id}/online-booking`, { onlineBookingEnabled: newStatus });
       setIsOnlineEnabled(newStatus);
       toast.success(newStatus ? "Online Booking Enabled" : "Online Booking Disabled");
@@ -398,6 +397,22 @@ function DoctorRow({ doctor, clinicId, specializations, locale, refetch }: { doc
       toast.error("Failed to update booking status");
     } finally {
       setIsToggling(false);
+    }
+  };
+
+  // 🟢 NEW: Remove Doctor Logic
+  const handleRemoveDoctor = async () => {
+    if (!confirm("Are you sure you want to remove this doctor from your clinic?\n\nThis will permanently delete all their schedules specifically at this clinic, but their main account and associations with other clinics will remain safe.")) return;
+    
+    setIsRemoving(true);
+    try {
+      await api.delete(`/clinic/doctors/${doctor.id}`);
+      toast.success("Doctor and their schedules removed from your clinic successfully.");
+      refetch();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to remove doctor.");
+    } finally {
+      setIsRemoving(false);
     }
   };
 
@@ -447,12 +462,16 @@ function DoctorRow({ doctor, clinicId, specializations, locale, refetch }: { doc
           </button>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 mb-4 border-b border-slate-100 pb-4 dark:border-slate-800">
+        {/* 🟢 Modified Action Buttons Grid to include "Remove" */}
+        <div className="grid grid-cols-3 gap-2 mb-4 border-b border-slate-100 pb-4 dark:border-slate-800">
           <button onClick={() => { setShowSchedules(!showSchedules); setEditing(false); }} className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all ${showSchedules ? "bg-[#14B8A6] text-white shadow-sm" : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400"}`}>
             <CalendarDays className="h-4 w-4" /> Sessions
           </button>
           <button onClick={() => { setEditing(!editing); setShowSchedules(false); }} className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all ${editing ? "bg-[#252a67] text-white shadow-sm" : "bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400"}`}>
             <Edit2 className="h-4 w-4" /> Edit Profile
+          </button>
+          <button onClick={handleRemoveDoctor} disabled={isRemoving} className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400">
+            {isRemoving ? <Loader2 className="h-4 w-4 animate-spin"/> : <Trash2 className="h-4 w-4" />} Remove
           </button>
         </div>
 
@@ -708,4 +727,4 @@ function InlineScheduleEditor({ doctorId, clinicId }: { doctorId: string; clinic
       </div>
     </div>
   );
-} 
+}

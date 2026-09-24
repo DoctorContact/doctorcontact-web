@@ -20,7 +20,8 @@ import {
   Star,
   Megaphone,
   ClipboardList,
-  TestTube, // 🟢 নতুন আইকন যোগ করা হলো
+  TestTube,
+  Ambulance // 🟢 নতুন আইকন যোগ করা হলো
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import type { LucideIcon } from "lucide-react";
@@ -87,6 +88,12 @@ const SUPER_ADMIN_NAV_SECTIONS: NavSection[] = [
         href: "/super_admin/bookings",
         label: "All Bookings",
         icon: ClipboardList,
+      },
+
+      {
+        href: "/super_admin/ambulances",
+        label: "Add Aumbulances",
+        icon: Ambulance,
       },
     ],
   },

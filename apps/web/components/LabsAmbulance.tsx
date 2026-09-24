@@ -1,6 +1,6 @@
 "use client";
 
-import { FlaskConical, Ambulance, Check, Phone } from "lucide-react";
+import { FlaskConical, Ambulance, Check, ArrowRight } from "lucide-react";
 import { Link } from "@/i18n/routing";
 
 const LAB_POINTS = [
@@ -19,12 +19,16 @@ export default function LabsAmbulance() {
   return (
     <section id="labs" className="mx-auto max-w-7xl px-5 py-6 lg:px-8">
       <div className="grid gap-5 lg:grid-cols-2">
-        {/* ================= LABS CARD ================= */}
-        <div className="relative flex flex-col justify-between overflow-hidden rounded-2xl border border-[#E9D5FF] bg-[#FAF5FF]/90 p-6 shadow-sm transition-all duration-300 hover:shadow-md dark:border-soft-300 dark:bg-surface sm:flex-row sm:items-center">
+        
+        {/* ================= LABS CARD (ENTIRE CARD IS CLICKABLE) ================= */}
+        <Link 
+          href="/labs" 
+          className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-[#E9D5FF] bg-[#FAF5FF]/90 p-6 shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-1 dark:border-soft-300 dark:bg-surface sm:flex-row sm:items-center cursor-pointer block"
+        >
           <div className="z-10 max-w-sm">
             {/* Header with Beaker Icon */}
             <div className="flex items-center gap-3">
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white text-[#7C3AED] shadow-sm">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white text-[#7C3AED] shadow-sm transition-transform group-hover:scale-110">
                 <FlaskConical className="h-6 w-6" />
               </span>
               <div>
@@ -50,36 +54,34 @@ export default function LabsAmbulance() {
               ))}
             </ul>
 
-            {/* CTA Button */}
+            {/* Fake CTA Button (Looks like a button but the whole card clicks) */}
             <div className="mt-6">
-              <Link
-                href="/labs"
-                className="inline-block rounded-xl bg-[#7C3AED] px-5 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-[#6D28D9]"
-              >
-                Book Test
-              </Link>
+              <span className="inline-flex items-center gap-1.5 rounded-xl bg-[#7C3AED] px-5 py-2 text-xs font-bold text-white shadow-sm transition group-hover:bg-[#6D28D9]">
+                <span>Book Test</span>
+                <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+              </span>
             </div>
           </div>
 
           {/* Right Image */}
-          <div className="relative mt-4 sm:mt-0 h-36 w-full sm:w-44 shrink-0 overflow-hidden rounded-xl border border-white/80 bg-white shadow-sm">
+          <div className="relative mt-4 sm:mt-0 h-36 w-full sm:w-44 shrink-0 overflow-hidden rounded-xl border border-white/80 bg-white shadow-sm transition-transform duration-500 group-hover:scale-105">
             <img
               src="/assets/home/labs-tubes.jpg"
               alt="Medical Lab Testing"
               className="h-full w-full object-cover"
             />
           </div>
-        </div>
+        </Link>
 
-        {/* ================= AMBULANCE CARD ================= */}
-        <div
-          id="ambulance"
-          className="relative flex flex-col justify-between overflow-hidden rounded-2xl border border-[#FECDD3] bg-[#FFF1F2]/90 p-6 shadow-sm transition-all duration-300 hover:shadow-md dark:border-soft-300 dark:bg-surface sm:flex-row sm:items-center"
+        {/* ================= AMBULANCE CARD (ENTIRE CARD IS CLICKABLE) ================= */}
+        <Link 
+          href="/ambulances" 
+          className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-[#FECDD3] bg-[#FFF1F2]/90 p-6 shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-1 dark:border-soft-300 dark:bg-surface sm:flex-row sm:items-center cursor-pointer block"
         >
           <div className="z-10 max-w-sm">
             {/* Header with Ambulance Icon */}
             <div className="flex items-center gap-3">
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white text-[#DC2626] shadow-sm">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white text-[#DC2626] shadow-sm transition-transform group-hover:scale-110">
                 <Ambulance className="h-6 w-6" />
               </span>
               <div>
@@ -105,27 +107,25 @@ export default function LabsAmbulance() {
               ))}
             </ul>
 
-            {/* CTA Button */}
+            {/* Fake CTA Button (Looks like a button but the whole card clicks) */}
             <div className="mt-6">
-              <a
-                href="tel:102"
-                className="inline-flex items-center gap-1.5 rounded-xl bg-[#DC2626] px-5 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-[#B91C1C]"
-              >
-                <Phone className="h-3.5 w-3.5" />
-                <span>Call Now</span>
-              </a>
+              <span className="inline-flex items-center gap-1.5 rounded-xl bg-[#DC2626] px-5 py-2 text-xs font-bold text-white shadow-sm transition group-hover:bg-[#B91C1C]">
+                <span>Find Ambulances</span>
+                <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+              </span>
             </div>
           </div>
 
           {/* Right Image */}
-          <div className="relative mt-4 sm:mt-0 h-36 w-full sm:w-44 shrink-0 overflow-hidden rounded-xl border border-white/80 bg-white shadow-sm">
+          <div className="relative mt-4 sm:mt-0 h-36 w-full sm:w-44 shrink-0 overflow-hidden rounded-xl border border-white/80 bg-white shadow-sm transition-transform duration-500 group-hover:scale-105">
             <img
               src="/assets/home/ambulance.jpg"
               alt="Emergency Ambulance"
               className="h-full w-full object-cover"
             />
           </div>
-        </div>
+        </Link>
+
       </div>
     </section>
   );
