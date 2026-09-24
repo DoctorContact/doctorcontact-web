@@ -119,7 +119,7 @@ export default function LabsAmbulance() {
           {/* Right Image */}
           <div className="relative mt-4 sm:mt-0 h-36 w-full sm:w-44 shrink-0 overflow-hidden rounded-xl border border-white/80 bg-white shadow-sm transition-transform duration-500 group-hover:scale-105">
             <img
-              src="/assets/home/ambulance.jpg"
+              src="/assets/home/ambulances.jpg"
               alt="Emergency Ambulance"
               className="h-full w-full object-cover"
             />
