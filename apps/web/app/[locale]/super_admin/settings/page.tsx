@@ -22,6 +22,8 @@ import { GradientCard } from "@/components/ui/GradientCard";
 import AddLocationForm from "./components/AddLocationForm";
 import AddSpecializationForm from "./components/AddSpecializationForm";
 import ManageSpecializations from "./components/ManageSpecializations";
+// 🌟 OTP Balance Widget Import করা হলো
+import OtpBalanceWidget from "./components/OtpBalanceWidget"; 
 
 export default function AdminSettingsPage() {
   const t = useTranslations("AdminSettings");
@@ -185,71 +187,76 @@ export default function AdminSettingsPage() {
 
       {/* Main Settings Sections */}
       {!isLoading && (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          
-          {/* Booking Window Settings Card */}
-          <GradientCard variant="slate">
-            <div className="p-6 h-full">
-              <form onSubmit={handleSave} className="space-y-5">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400">
-                      <Clock className="h-4 w-4" />
+        <div className="space-y-6">
+          {/* 🌟 OTP Balance Widget Full Width (Top of the page) */}
+          <OtpBalanceWidget />
+
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            
+            {/* Booking Window Settings Card */}
+            <GradientCard variant="slate">
+              <div className="p-6 h-full">
+                <form onSubmit={handleSave} className="space-y-5">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400">
+                        <Clock className="h-4 w-4" />
+                      </div>
+                      <label className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                        {t("bookingWindow")}
+                      </label>
                     </div>
-                    <label className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                      {t("bookingWindow")}
-                    </label>
+                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                      {t("bookingWindowDesc")}
+                    </p>
+
+                    <div className="mt-3">
+                      <input
+                        type="number"
+                        min={1}
+                        max={1440}
+                        value={bookingWindow}
+                        onChange={(e) => setBookingWindow(Number(e.target.value))}
+                        required
+                        className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-900 shadow-xs outline-none transition focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                      />
+                    </div>
                   </div>
-                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                    {t("bookingWindowDesc")}
-                  </p>
 
-                  <div className="mt-3">
-                    <input
-                      type="number"
-                      min={1}
-                      max={1440}
-                      value={bookingWindow}
-                      onChange={(e) => setBookingWindow(Number(e.target.value))}
-                      required
-                      className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-900 shadow-xs outline-none transition focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
-                    />
+                  {settings?.updatedAt && (
+                    <p className="text-[10px] font-medium text-slate-400 dark:text-slate-500">
+                      {t("lastUpdated")}: {new Date(settings.updatedAt).toLocaleString(localeCode)}
+                    </p>
+                  )}
+
+                  <div className="border-t border-slate-100 pt-4 dark:border-slate-800">
+                    <button
+                      type="submit"
+                      disabled={updateSettings.isPending}
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 px-4 py-2 text-xs font-bold text-white shadow-xs transition hover:scale-105 active:scale-95 disabled:opacity-50"
+                    >
+                      <Save className="h-3.5 w-3.5" />
+                      <span>{updateSettings.isPending ? t("saving") : t("saveSettings")}</span>
+                    </button>
                   </div>
-                </div>
+                </form>
+              </div>
+            </GradientCard>
 
-                {settings?.updatedAt && (
-                  <p className="text-[10px] font-medium text-slate-400 dark:text-slate-500">
-                    {t("lastUpdated")}: {new Date(settings.updatedAt).toLocaleString(localeCode)}
-                  </p>
-                )}
-
-                <div className="border-t border-slate-100 pt-4 dark:border-slate-800">
-                  <button
-                    type="submit"
-                    disabled={updateSettings.isPending}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 px-4 py-2 text-xs font-bold text-white shadow-xs transition hover:scale-105 active:scale-95 disabled:opacity-50"
-                  >
-                    <Save className="h-3.5 w-3.5" />
-                    <span>{updateSettings.isPending ? t("saving") : t("saveSettings")}</span>
-                  </button>
-                </div>
-              </form>
+            {/* Search Location Management Card */}
+            <div className="h-full">
+              <AddLocationForm />
             </div>
-          </GradientCard>
 
-          {/* Search Location Management Card */}
-          <div className="h-full">
-            <AddLocationForm />
-          </div>
+            {/* Specialization Management (Full Width) */}
+            <div className="lg:col-span-2">
+              <AddSpecializationForm />
+            </div>
+            <div className="lg:col-span-2">
+              <ManageSpecializations />
+            </div>
 
-          {/* Specialization Management (Full Width) */}
-          <div className="lg:col-span-2">
-            <AddSpecializationForm />
           </div>
-          <div className="lg:col-span-2">
-            <ManageSpecializations />
-          </div>
-
         </div>
       )}
     </div>

@@ -29,6 +29,15 @@
     <priority>0.80</priority>
   </url>
 
+   <!-- All labs -->
+  <url>
+    <loc>https://www.doctorcontact.in/labs</loc>
+    <lastmod>2026-09-28</lastmod>
+    <priority>0.70</priority>
+  </url>
+
+
+
   <!-- About Us -->
   <url>
     <loc>https://www.doctorcontact.in/about</loc>

@@ -250,3 +250,14 @@ export const fetchMyNotifications = async () => {
     return []; 
   }
 };
+
+// === Admin OTP Balance API ===
+export const fetchOtpBalance = async () => {
+  try {
+    const response = await api.get('/admin/otp-balance');
+    return response.data; 
+  } catch (error) {
+    console.error("Failed to fetch OTP balance:", error);
+    throw error;
+  }
+};
