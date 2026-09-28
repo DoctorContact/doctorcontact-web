@@ -1,9 +1,60 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  
+  <!-- Homepage -->
   <url>
     <loc>https://www.doctorcontact.in/</loc>
-    <lastmod>2026-09-27</lastmod>
+    <lastmod>2026-09-28</lastmod>
     <priority>1.00</priority>
   </url>
-  <!-- Apnar jodi aro page thake, jemon about ba contact, segulo ekhane add korben -->
+
+  <!-- Doctors Page -->
+  <url>
+    <loc>https://www.doctorcontact.in/doctors</loc>
+    <lastmod>2026-09-28</lastmod>
+    <priority>0.90</priority>
+  </url>
+
+  <!-- Clinics Page -->
+  <url>
+    <loc>https://www.doctorcontact.in/clinics</loc>
+    <lastmod>2026-09-28</lastmod>
+    <priority>0.90</priority>
+  </url>
+
+  <!-- Available Doctors -->
+  <url>
+    <loc>https://www.doctorcontact.in/available-doctors</loc>
+    <lastmod>2026-09-28</lastmod>
+    <priority>0.80</priority>
+  </url>
+
+  <!-- About Us -->
+  <url>
+    <loc>https://www.doctorcontact.in/about</loc>
+    <lastmod>2026-09-28</lastmod>
+    <priority>0.70</priority>
+  </url>
+
+  <!-- Contact Us -->
+  <url>
+    <loc>https://www.doctorcontact.in/contact</loc>
+    <lastmod>2026-09-28</lastmod>
+    <priority>0.70</priority>
+  </url>
+
+  <!-- Privacy Policy -->
+  <url>
+    <loc>https://www.doctorcontact.in/privacy</loc>
+    <lastmod>2026-09-28</lastmod>
+    <priority>0.50</priority>
+  </url>
+
+  <!-- Terms and Conditions -->
+  <url>
+    <loc>https://www.doctorcontact.in/terms</loc>
+    <lastmod>2026-09-28</lastmod>
+    <priority>0.50</priority>
+  </url>
+
 </urlset>
