@@ -21,7 +21,9 @@ import {
   Megaphone,
   ClipboardList,
   TestTube,
-  Ambulance // 🟢 নতুন আইকন যোগ করা হলো
+  Ambulance,
+  FileCheck,
+  Plus
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import type { LucideIcon } from "lucide-react";
@@ -70,7 +72,7 @@ const SUPER_ADMIN_NAV_SECTIONS: NavSection[] = [
         icon: Activity,
       },
       {
-        href: "/super_admin/diagnostic-tests", // 🟢 নতুন গ্লোবাল টেস্ট পেজের লিংক
+        href: "/super_admin/diagnostic-tests", 
         label: "Global Tests",
         icon: TestTube,
       },
@@ -84,15 +86,25 @@ const SUPER_ADMIN_NAV_SECTIONS: NavSection[] = [
   {
     title: "Operations",
     items: [
+      // 🟢 Notun Menu Item add kora holo Requests er jonne
+      {
+        href: "/super_admin/requests",
+        label: "Clinic Requests",
+        icon: FileCheck,
+      },
+      {
+        href: "/super_admin/assign-doctor",
+        label: "Assign Doctor",
+        icon: Plus, // ba onno kono icon (e.g. UserPlus)
+      },
       {
         href: "/super_admin/bookings",
         label: "All Bookings",
         icon: ClipboardList,
       },
-
       {
         href: "/super_admin/ambulances",
-        label: "Add Aumbulances",
+        label: "Add Ambulances",
         icon: Ambulance,
       },
     ],

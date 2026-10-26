@@ -16,13 +16,15 @@ import {
   X,
   AlertTriangle,
   Globe,
-  Loader2 // 🟢 FIX: Add Loader2 here
+  Loader2,
+  Edit2, 
+  ImagePlus,
+  Trash2 // 🟢 Added Trash icon for remove photo
 } from "lucide-react";
 import {
   useAdminClinics,
   useApproveClinic,
   useRevokeClinic,
-  useCreateClinic,
 } from "@/lib/hooks/useAdmin";
 import type { AdminClinicRecord } from "@doctor-contract/shared";
 import { GradientCard } from "@/components/ui/GradientCard";
@@ -31,7 +33,6 @@ import { api } from "@/lib/api";
 
 type FilterTab = "ALL" | "APPROVED" | "PENDING";
 
-// 🟢 Helper to parse Multi-Language Names (Solves Issue 5)
 const parseMultiLangName = (rawName: string = "") => {
   const parts = rawName.split(" | ");
   return {
@@ -58,7 +59,6 @@ export default function AdminClinicsPage() {
     limit,
   });
 
-  // 🟢 Fetch Locations for Dropdown (Solves Issue 4)
   const { data: locationsList = [], isLoading: isLoadingLocs } = useQuery({
     queryKey: ["adminLocations"],
     queryFn: async () => {
@@ -69,68 +69,115 @@ export default function AdminClinicsPage() {
 
   const approveClinic = useApproveClinic();
   const revokeClinic = useRevokeClinic();
-  const createClinic = useCreateClinic();
 
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Dialog states
   const [pendingApproveClinic, setPendingApproveClinic] = useState<AdminClinicRecord | null>(null);
   const [pendingRevokeClinic, setPendingRevokeClinic] = useState<AdminClinicRecord | null>(null);
+  
+  // Modal States
   const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
+  const [editingClinic, setEditingClinic] = useState<AdminClinicRecord | null>(null);
+  
+  // 🟢 Photo Upload States
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [removeLogo, setRemoveLogo] = useState<boolean>(false); // 🟢 New state for removal
 
-  // 🟢 Create Clinic Form State (Updated with 3 languages)
   const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    password: "",
-    phone: "",
-    clinicNameEn: "",
-    clinicNameBn: "",
-    clinicNameHi: "",
-    address: "",
-    city: "",
-    state: "",
-    pincode: "",
+    name: "", email: "", password: "", phone: "",
+    clinicNameEn: "", clinicNameBn: "", clinicNameHi: "",
+    address: "", city: "", state: "", pincode: "",
   });
 
   const clinics = data?.clinics || [];
   const total = data?.total || 0;
   const totalPages = Math.ceil(total / limit) || 1;
 
+  const resetForm = () => {
+    setFormData({
+      name: "", email: "", password: "", phone: "",
+      clinicNameEn: "", clinicNameBn: "", clinicNameHi: "",
+      address: "", city: "", state: "", pincode: "",
+    });
+    setLogoFile(null);
+    setLogoPreview(null);
+    setRemoveLogo(false); // 🟢 Reset
+    setEditingClinic(null);
+    setShowCreateModal(false);
+  };
+
+  const openEditModal = (clinic: AdminClinicRecord) => {
+    const parsed = parseMultiLangName(clinic.clinicName);
+    setFormData({
+      name: clinic.user?.name || "",
+      email: clinic.user?.email || "",
+      password: "", 
+      phone: clinic.user?.phone || "",
+      clinicNameEn: parsed.en,
+      clinicNameBn: parsed.bn,
+      clinicNameHi: parsed.hi,
+      address: clinic.address || "",
+      city: clinic.city || "",
+      state: clinic.state || "",
+      pincode: clinic.pincode || "",
+    });
+    setLogoFile(null);
+    setLogoPreview(clinic.logo || null); 
+    setRemoveLogo(false); // 🟢 Reset
+    setEditingClinic(clinic);
+    setShowCreateModal(true);
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setLogoFile(file);
+      setLogoPreview(URL.createObjectURL(file));
+      setRemoveLogo(false); // 🟢 Cancel removal if new image is selected
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setLogoFile(null);
+    setLogoPreview(null);
+    setRemoveLogo(true); // 🟢 Trigger removal flag for backend
+  };
+
   async function handleConfirmApprove() {
     if (!pendingApproveClinic) return;
-    const clinicId = pendingApproveClinic.id;
-    setPendingApproveClinic(null);
     setActionError(null);
     setActionSuccess(null);
-
     try {
-      await approveClinic.mutateAsync(clinicId);
+      await approveClinic.mutateAsync(pendingApproveClinic.id);
       setActionSuccess(t("successApproved"));
       refetch();
     } catch (err: any) {
       setActionError(err?.response?.data?.message || "Failed to approve clinic");
+    } finally {
+      setPendingApproveClinic(null);
     }
   }
 
   async function handleConfirmRevoke() {
     if (!pendingRevokeClinic) return;
-    const clinicId = pendingRevokeClinic.id;
-    setPendingRevokeClinic(null);
     setActionError(null);
     setActionSuccess(null);
-
     try {
-      await revokeClinic.mutateAsync(clinicId);
+      await revokeClinic.mutateAsync(pendingRevokeClinic.id);
       setActionSuccess(t("successRevoked"));
       refetch();
     } catch (err: any) {
       setActionError(err?.response?.data?.message || "Failed to revoke clinic approval");
+    } finally {
+      setPendingRevokeClinic(null);
     }
   }
 
-  async function handleCreateClinic(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setActionError(null);
     setActionSuccess(null);
@@ -140,54 +187,56 @@ export default function AdminClinicsPage() {
       return;
     }
 
-    // Combine Names
     const combinedClinicName = `${formData.clinicNameEn.trim()} | ${formData.clinicNameBn.trim()} | ${formData.clinicNameHi.trim()}`;
 
-    // 🟢 FIX: Clean payload. Do not send empty strings for optional fields to avoid Zod "too_small" errors.
-    const payload: any = {
-      name: formData.name,
-      email: formData.email,
-      password: formData.password,
-      clinicName: combinedClinicName,
-    };
-
-    if (formData.phone?.trim()) payload.phone = formData.phone;
-    if (formData.address?.trim()) payload.address = formData.address;
-    if (formData.city?.trim()) payload.city = formData.city;
-    if (formData.state?.trim()) payload.state = formData.state;
-    if (formData.pincode?.trim()) payload.pincode = formData.pincode;
+    const payload = new FormData();
+    payload.append("clinicName", combinedClinicName);
+    if (formData.name) payload.append("name", formData.name);
+    if (formData.email) payload.append("email", formData.email);
+    if (formData.phone) payload.append("phone", formData.phone);
+    if (formData.address) payload.append("address", formData.address);
+    if (formData.city) payload.append("city", formData.city);
+    if (formData.state) payload.append("state", formData.state);
+    if (formData.pincode) payload.append("pincode", formData.pincode);
+    
+    // 🟢 Attach Logo or Remove Logo flag
+    if (logoFile) {
+      payload.append("logo", logoFile);
+    } else if (removeLogo) {
+      payload.append("removeLogo", "true");
+    }
 
     try {
-      await createClinic.mutateAsync(payload);
-      setShowCreateModal(false);
-      setFormData({
-        name: "", email: "", password: "", phone: "",
-        clinicNameEn: "", clinicNameBn: "", clinicNameHi: "",
-        address: "", city: "", state: "", pincode: "",
-      });
-      setActionSuccess(t("successCreated"));
+      setIsSubmitting(true);
+      if (editingClinic) {
+        await api.patch(`/admin/clinics/${editingClinic.id}/edit`, payload, {
+          headers: { "Content-Type": "multipart/form-data" }
+        });
+        setActionSuccess("Clinic updated successfully!");
+      } else {
+        if (!formData.password) {
+          setActionError("Password is required for new clinics.");
+          setIsSubmitting(false);
+          return;
+        }
+        payload.append("password", formData.password);
+        await api.post(`/admin/clinics`, payload, {
+          headers: { "Content-Type": "multipart/form-data" }
+        });
+        setActionSuccess(t("successCreated"));
+      }
+
+      resetForm();
       refetch();
     } catch (err: any) {
-      setActionError(err?.response?.data?.message || "Failed to create clinic");
-    }
-  }
-
-  function formatDate(dateStr?: string | null) {
-    if (!dateStr) return "—";
-    try {
-      return new Date(dateStr).toLocaleDateString(localeCode, {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      });
-    } catch {
-      return dateStr;
+      setActionError(err?.response?.data?.message || "Operation failed.");
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
   return (
     <div className="space-y-6">
-      {/* Header - Purple */}
       <GradientCard variant="purple">
         <div className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -206,7 +255,7 @@ export default function AdminClinicsPage() {
           <div className="flex items-center gap-2 self-start sm:self-auto">
             <button
               type="button"
-              onClick={() => setShowCreateModal(true)}
+              onClick={() => { resetForm(); setShowCreateModal(true); }}
               className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-3.5 py-2 text-xs font-bold text-white shadow-xs transition hover:scale-105 active:scale-95"
             >
               <Plus className="h-3.5 w-3.5" />
@@ -225,7 +274,6 @@ export default function AdminClinicsPage() {
         </div>
       </GradientCard>
 
-      {/* Action Error Alert */}
       {actionError && (
         <div className="flex items-center justify-between rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/20 dark:text-rose-300">
           <div className="flex items-center gap-2">
@@ -238,7 +286,6 @@ export default function AdminClinicsPage() {
         </div>
       )}
 
-      {/* Action Success Alert */}
       {actionSuccess && (
         <div className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/20 dark:text-emerald-300">
           <div className="flex items-center gap-2">
@@ -251,7 +298,6 @@ export default function AdminClinicsPage() {
         </div>
       )}
 
-      {/* Status Filter Tabs */}
       <GradientCard variant="slate">
         <div className="flex flex-wrap gap-1.5 p-2">
           <button type="button" onClick={() => { setActiveTab("ALL"); setPage(1); }} className={`rounded-xl px-3.5 py-1.5 text-xs font-bold transition ${activeTab === "ALL" ? "bg-blue-600 text-white shadow-xs" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"}`}>
@@ -266,20 +312,6 @@ export default function AdminClinicsPage() {
         </div>
       </GradientCard>
 
-      {/* Error State */}
-      {isError && (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/20 dark:text-rose-300">
-          <div className="flex items-center gap-3">
-            <AlertCircle className="h-5 w-5 shrink-0 text-rose-600 dark:text-rose-400" />
-            <div className="flex-1"><h3 className="text-xs font-semibold">{t("errorTitle")}</h3></div>
-            <button type="button" onClick={() => refetch()} className="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-rose-700">
-              {t("retry")}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Loading Skeleton */}
       {isLoading && (
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900">
           <div className="space-y-3">
@@ -290,7 +322,6 @@ export default function AdminClinicsPage() {
         </div>
       )}
 
-      {/* Clinics Table */}
       {!isLoading && !isError && (
         <GradientCard variant="slate">
           <div className="overflow-hidden">
@@ -311,7 +342,6 @@ export default function AdminClinicsPage() {
                       <th className="px-4 py-3">{t("owner")}</th>
                       <th className="px-4 py-3">{t("location")}</th>
                       <th className="px-4 py-3">{t("approvalStatus")}</th>
-                      <th className="px-4 py-3">{t("createdDate")}</th>
                       <th className="px-4 py-3 text-right">{t("actions")}</th>
                     </tr>
                   </thead>
@@ -324,9 +354,13 @@ export default function AdminClinicsPage() {
                         <tr key={clinic.id} className="transition hover:bg-slate-50/60 dark:hover:bg-slate-800/50">
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2.5">
-                              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-purple-50 text-purple-600 dark:bg-purple-950/40 dark:text-purple-400">
-                                <Building2 className="h-4 w-4" />
-                              </div>
+                              {clinic.logo ? (
+                                <img src={clinic.logo} alt="Logo" className="h-8 w-8 rounded-lg object-cover border border-slate-200 dark:border-slate-700" />
+                              ) : (
+                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-purple-50 text-purple-600 dark:bg-purple-950/40 dark:text-purple-400">
+                                  <Building2 className="h-4 w-4" />
+                                </div>
+                              )}
                               <div>
                                 <p className="font-semibold text-slate-900 dark:text-slate-100">
                                   {displayClinicName}
@@ -356,17 +390,25 @@ export default function AdminClinicsPage() {
                               </span>
                             )}
                           </td>
-                          <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{formatDate(clinic.createdAt)}</td>
                           <td className="px-4 py-3 text-right">
-                            {clinic.isApproved ? (
-                              <button type="button" onClick={() => setPendingRevokeClinic(clinic)} disabled={revokeClinic.isPending} className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-rose-600 transition hover:bg-rose-50 disabled:opacity-50 dark:border-rose-900/50 dark:bg-slate-900 dark:text-rose-400 dark:hover:bg-rose-950/30">
-                                <ShieldAlert className="h-3 w-3" /> <span>{t("revoke")}</span>
+                            <div className="flex items-center justify-end gap-2">
+                              <button 
+                                onClick={() => openEditModal(clinic)}
+                                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+                              >
+                                <Edit2 className="h-3 w-3" /> <span>Edit</span>
                               </button>
-                            ) : (
-                              <button type="button" onClick={() => setPendingApproveClinic(clinic)} disabled={approveClinic.isPending} className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50">
-                                <ShieldCheck className="h-3 w-3" /> <span>{t("approve")}</span>
-                              </button>
-                            )}
+
+                              {clinic.isApproved ? (
+                                <button type="button" onClick={() => setPendingRevokeClinic(clinic)} disabled={revokeClinic.isPending} className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-rose-600 transition hover:bg-rose-50 disabled:opacity-50 dark:border-rose-900/50 dark:bg-slate-900 dark:text-rose-400 dark:hover:bg-rose-950/30">
+                                  <ShieldAlert className="h-3 w-3" /> <span>{t("revoke")}</span>
+                                </button>
+                              ) : (
+                                <button type="button" onClick={() => setPendingApproveClinic(clinic)} disabled={approveClinic.isPending} className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50">
+                                  <ShieldCheck className="h-3 w-3" /> <span>{t("approve")}</span>
+                                </button>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       );
@@ -376,7 +418,6 @@ export default function AdminClinicsPage() {
               </div>
             )}
 
-            {/* Pagination Controls */}
             {total > limit && (
               <div className="flex items-center justify-between border-t border-slate-200 px-4 py-3 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
                 <span>{t("page")} {page} of {totalPages} ({total.toLocaleString(localeCode)} clinics)</span>
@@ -394,7 +435,6 @@ export default function AdminClinicsPage() {
         </GradientCard>
       )}
 
-      {/* Approve Confirmation Modal */}
       {pendingApproveClinic && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-xs">
           <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-5 shadow-xl transition-all dark:border-slate-800 dark:bg-slate-900">
@@ -407,7 +447,6 @@ export default function AdminClinicsPage() {
                 <p className="text-xs text-slate-500 dark:text-slate-400">{parseMultiLangName(pendingApproveClinic.clinicName).en}</p>
               </div>
             </div>
-            <p className="mt-3 text-xs text-slate-600 dark:text-slate-300">{t("approveDialogDesc")}</p>
             <div className="mt-5 flex items-center justify-end gap-2">
               <button type="button" onClick={() => setPendingApproveClinic(null)} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">{t("cancel")}</button>
               <button type="button" onClick={handleConfirmApprove} disabled={approveClinic.isPending} className="rounded-lg bg-emerald-600 px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-700">{approveClinic.isPending ? t("saving") : t("confirm")}</button>
@@ -416,7 +455,6 @@ export default function AdminClinicsPage() {
         </div>
       )}
 
-      {/* Revoke Confirmation Modal */}
       {pendingRevokeClinic && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-xs">
           <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-5 shadow-xl transition-all dark:border-slate-800 dark:bg-slate-900">
@@ -429,7 +467,6 @@ export default function AdminClinicsPage() {
                 <p className="text-xs text-slate-500 dark:text-slate-400">{parseMultiLangName(pendingRevokeClinic.clinicName).en}</p>
               </div>
             </div>
-            <p className="mt-3 text-xs text-slate-600 dark:text-slate-300">{t("revokeDialogDesc")}</p>
             <div className="mt-5 flex items-center justify-end gap-2">
               <button type="button" onClick={() => setPendingRevokeClinic(null)} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">{t("cancel")}</button>
               <button type="button" onClick={handleConfirmRevoke} disabled={revokeClinic.isPending} className="rounded-lg bg-rose-600 px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-rose-700">{revokeClinic.isPending ? t("saving") : t("confirm")}</button>
@@ -438,22 +475,56 @@ export default function AdminClinicsPage() {
         </div>
       )}
 
-      {/* Create Clinic Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-xs overflow-y-auto">
           <div className="w-full max-w-2xl rounded-2xl border border-slate-200 bg-white shadow-xl transition-all dark:border-slate-800 dark:bg-slate-900 my-8">
             <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white/95 px-6 py-4 backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/95">
               <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">{t("createClinicTitle")}</h3>
-                <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{t("createClinicDesc")}</p>
+                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                  {editingClinic ? "Edit Clinic Details" : t("createClinicTitle")}
+                </h3>
+                <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                  {editingClinic ? "Update clinic and owner information" : t("createClinicDesc")}
+                </p>
               </div>
-              <button type="button" onClick={() => setShowCreateModal(false)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200">
+              <button type="button" onClick={resetForm} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200">
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateClinic} className="mt-2 space-y-4 p-6">
-              {/* 🟢 Clinic Names in 3 Languages (Solves Issue 5) */}
+            <form onSubmit={handleSubmit} className="mt-2 space-y-4 p-6">
+              
+              {/* 🟢 Interactive Logo Upload Section with Remove Button */}
+              <div className="flex flex-col items-center justify-center mb-6">
+                <div className="relative group">
+                  <label className="relative flex h-24 w-24 cursor-pointer items-center justify-center rounded-full border-2 border-dashed border-slate-300 bg-slate-50 transition hover:bg-slate-100 overflow-hidden dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700">
+                    {logoPreview ? (
+                      <img src={logoPreview} alt="Logo Preview" className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex flex-col items-center text-slate-400">
+                        <ImagePlus className="h-6 w-6 mb-1" />
+                        <span className="text-[10px] font-medium">Upload Logo</span>
+                      </div>
+                    )}
+                    <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+                  </label>
+                  
+                  {/* 🟢 Trash Icon for removing existing/selected photo */}
+                  {logoPreview && (
+                    <button
+                      type="button"
+                      onClick={handleRemoveImage}
+                      className="absolute -right-1 -top-1 flex h-7 w-7 items-center justify-center rounded-full bg-rose-100 text-rose-600 shadow-md hover:bg-rose-200 transition-colors dark:bg-rose-900 dark:text-rose-300"
+                      title="Remove Logo"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+                {logoFile && <p className="mt-2 text-[10px] text-slate-500">{logoFile.name}</p>}
+                {removeLogo && <p className="mt-2 text-[10px] font-bold text-rose-500">Logo will be removed upon saving.</p>}
+              </div>
+
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div>
                   <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-500">English Clinic Name *</label>
@@ -475,23 +546,24 @@ export default function AdminClinicsPage() {
                   <input type="text" required value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm outline-none transition focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white" />
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-500">{t("ownerEmail")} *</label>
-                  <input type="email" required value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm outline-none transition focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white" />
+                  <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-500">{t("ownerEmail")} {editingClinic ? "" : "*"}</label>
+                  <input type="email" required={!editingClinic} disabled={!!editingClinic} value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm outline-none transition disabled:opacity-50 focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white" />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-500">{t("password")} *</label>
-                  <input type="password" required minLength={6} value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm outline-none transition focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white" />
-                </div>
-                <div>
+                {!editingClinic && (
+                  <div>
+                    <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-500">{t("password")} *</label>
+                    <input type="password" required minLength={6} value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm outline-none transition focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white" />
+                  </div>
+                )}
+                <div className={editingClinic ? "col-span-2 sm:col-span-1" : ""}>
                   <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-500">{t("ownerPhone")}</label>
                   <input type="tel" value={formData.phone || ""} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm outline-none transition focus:border-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white" />
                 </div>
               </div>
 
-              {/* 🟢 Location Selection (Solves Issue 4) */}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div>
                   <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Location (City)</label>
@@ -522,12 +594,12 @@ export default function AdminClinicsPage() {
               </div>
 
               <div className="mt-6 flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
-                <button type="button" onClick={() => setShowCreateModal(false)} className="rounded-xl px-5 py-2.5 text-sm font-bold text-slate-600 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">
+                <button type="button" onClick={resetForm} className="rounded-xl px-5 py-2.5 text-sm font-bold text-slate-600 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">
                   {t("cancel")}
                 </button>
-                <button type="submit" disabled={createClinic.isPending} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-blue-700 disabled:opacity-50">
-                  {createClinic.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                  {t("saveClinic")}
+                <button type="submit" disabled={isSubmitting} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-blue-700 disabled:opacity-50">
+                  {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                  {editingClinic ? "Save Changes" : t("saveClinic")}
                 </button>
               </div>
             </form>
