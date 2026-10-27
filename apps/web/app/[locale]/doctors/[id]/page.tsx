@@ -52,9 +52,6 @@ export default function DoctorProfilePage() {
   const [isFetchingSchedules, setIsFetchingSchedules] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  // Date-strip state — replaces the old full month calendar. Only real,
-  // actually-bookable dates (from the backend's availability engine) are
-  // ever shown here, so there's no way to land on an empty day.
   type AvailableDateEntry = { date: string; sessions: any[] };
   const [availableDates, setAvailableDates] = useState<AvailableDateEntry[]>([]);
   const [isFetchingDates, setIsFetchingDates] = useState(false);
@@ -75,12 +72,6 @@ export default function DoctorProfilePage() {
     if (doctorId) fetchDoctor();
   }, [doctorId]);
 
-  // Completes the Clinic -> Doctor -> Appointment flow: if the patient
-  // arrived here from a specific clinic's page (?clinicId=...), jump
-  // straight into that clinic's booking flow instead of making them find
-  // and re-click the same clinic again from the chamber list below. Reuses
-  // the exact same date-strip / availability fetch as opening the modal
-  // manually — no separate code path, so it can't drift out of sync.
   useEffect(() => {
     if (!doctor) return;
     const requestedClinicId = searchParams.get("clinicId");
@@ -89,23 +80,22 @@ export default function DoctorProfilePage() {
     if (match) openBookingModal(match);
   }, [doctor, searchParams]);
 
-  // Step 1: once a clinic is chosen, fetch the doctor's next real available
-  // dates AT THAT EXACT CLINIC — never a shared/merged list across clinics.
+  // 🟢 FIX 1: Listen specifically to selectedClinic?.id to avoid reference issues
   useEffect(() => {
     async function fetchAvailableDates() {
-      if (!selectedClinic) return;
+      if (!selectedClinic?.id) return;
+      
       setIsFetchingDates(true);
       setAvailableDates([]);
       setDate("");
       setSchedules([]);
       setSelectedScheduleId("");
+      
       try {
         const res = await api.get(`/doctors/${doctorId}/clinics/${selectedClinic.id}/schedules/available-dates?limit=10`);
         if (res.data?.success) {
           const dates: AvailableDateEntry[] = res.data.data.dates || [];
           setAvailableDates(dates);
-          // Auto-select the very next available date so the patient sees
-          // sessions immediately instead of an empty "pick a date" state.
           if (dates.length > 0) setDate(dates[0].date);
         }
       } catch (err) {
@@ -115,14 +105,11 @@ export default function DoctorProfilePage() {
       }
     }
     fetchAvailableDates();
-  }, [selectedClinic, doctorId]);
+  }, [selectedClinic?.id, doctorId]);
 
-  // Step 2: once a specific date is picked from the strip, fetch that
-  // date's sessions (still the backend's live capacity — the frontend
-  // never assumes a slot is open just because it appeared in the date list).
   useEffect(() => {
     async function fetchClinicSchedules() {
-      if (!selectedClinic || !date) return;
+      if (!selectedClinic?.id || !date) return;
       setIsFetchingSchedules(true);
       setSelectedScheduleId("");
       try {
@@ -137,7 +124,7 @@ export default function DoctorProfilePage() {
       }
     }
     fetchClinicSchedules();
-  }, [selectedClinic, date, doctorId]);
+  }, [selectedClinic?.id, date, doctorId]);
 
   const openBookingModal = (clinic: any) => {
     setSelectedClinic(clinic);
@@ -146,12 +133,22 @@ export default function DoctorProfilePage() {
     setSelectedScheduleId("");
     setMessage(null);
     setIsModalOpen(true);
-    setAvailableDates([]);
+    // 🟢 Don't clear availableDates here, let the useEffect handle it.
   };
 
-  // Formats a "YYYY-MM-DD" into the "Today" / "13 Sep" label the date-strip
-  // shows, entirely from the string (no timezone re-derivation needed since
-  // the backend already resolved it against IST).
+  // 🟢 FIX 2: Helper function to correctly close modal and reset selected clinic
+  const closeBookingModal = () => {
+    setIsModalOpen(false);
+    setTimeout(() => {
+      // Clear after animation finishes so UI doesn't break instantly
+      setSelectedClinic(null);
+      setDate("");
+      setSchedules([]);
+      setSelectedScheduleId("");
+      setAvailableDates([]);
+    }, 200); 
+  };
+
   const formatDateStripLabel = (dateStr: string) => {
     const [y, m, d] = dateStr.split("-").map(Number);
     const dt = new Date(y, m - 1, d);
@@ -188,19 +185,15 @@ export default function DoctorProfilePage() {
         onSuccess: (appointment) => {
           setMessage({ type: "success", text: `Booking confirmed! Token #${appointment.token || appointment.id}` });
           setSchedules(prev => prev.map(s => s.id === selectedScheduleId ? { ...s, slotsLeft: s.slotsLeft - 1, currentBookings: s.currentBookings + 1 } : s));
-          setTimeout(() => setIsModalOpen(false), 3000);
+          setTimeout(() => closeBookingModal(), 3000); // 🟢 Use the new close function here
         },
         onError: (err: any) => {
-  const errorMessage =
-    err?.response?.data?.message ||
-    err?.message ||
-    "Failed to book appointment";
-
-  setMessage({
-    type: "error",
-    text: errorMessage,
-  });
-},
+          const errorMessage =
+            err?.response?.data?.message ||
+            err?.message ||
+            "Failed to book appointment";
+          setMessage({ type: "error", text: errorMessage });
+        },
       }
     );
   };
@@ -440,11 +433,11 @@ export default function DoctorProfilePage() {
                   <p className="text-xs text-blue-100">at {selectedClinic.clinicName}</p>
                 </div>
               </div>
-              <button onClick={() => setIsModalOpen(false)} className="text-white/70 hover:text-white"><X className="h-5 w-5" /></button>
+              {/* 🟢 FIX 3: Call closeBookingModal() on close button click */}
+              <button onClick={closeBookingModal} className="text-white/70 hover:text-white"><X className="h-5 w-5" /></button>
             </div>
 
             <div className="p-6">
-              {/* Date strip — only real, actually-bookable dates ever appear here */}
               <div className="mb-6">
                 <p className="mb-4 text-[10px] font-bold uppercase tracking-widest text-slate-400">Step 1: Choose Date</p>
                 {isFetchingDates ? (
@@ -483,7 +476,6 @@ export default function DoctorProfilePage() {
                 )}
               </div>
 
-              {/* Time Slots Section */}
               <p className="mb-4 text-[10px] font-bold uppercase tracking-widest text-slate-400">Step 2: Choose Timing</p>
               {!date ? (
                 <p className="mb-4 text-xs italic text-slate-400">Please select a date first.</p>
