@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import {
   Stethoscope,
@@ -20,7 +20,8 @@ import {
   Globe,
   XCircle,
   Edit2, 
-  ImagePlus 
+  ImagePlus,
+  Move
 } from "lucide-react";
 import { GradientCard } from "@/components/ui/GradientCard";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -38,6 +39,148 @@ const parseMultiLangName = (rawName: string = "") => {
   };
 };
 
+/* =========================================================================
+   🟢 WHATSAPP-STYLE PHOTO CROPPER MODAL (FIXED INITIAL ZOOM)
+========================================================================= */
+const ProfileCropperModal = ({ 
+  src, 
+  onCancel, 
+  onConfirm 
+}: { 
+  src: string; 
+  onCancel: () => void; 
+  onConfirm: (file: File, url: string) => void;
+}) => {
+  const [scale, setScale] = useState(1);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  
+  // 🟢 State to hold dynamic image dimensions to prevent over-zooming
+  const [imgDims, setImgDims] = useState({ width: '100%', height: '100%' });
+  
+  const imgRef = useRef<HTMLImageElement>(null);
+  
+  const CROP_SIZE = 250; 
+
+  // 🟢 Fix: Calculate aspect ratio to fit image perfectly in the box first
+  const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const { naturalWidth, naturalHeight } = e.currentTarget;
+    if (naturalWidth > naturalHeight) {
+      setImgDims({ width: 'auto', height: '100%' }); // Landscape
+    } else {
+      setImgDims({ width: '100%', height: 'auto' }); // Portrait
+    }
+  };
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    setIsDragging(true);
+    setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!isDragging) return;
+    setPosition({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
+  };
+
+  const handlePointerUp = () => setIsDragging(false);
+
+  const handleConfirm = () => {
+    if (!imgRef.current) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = CROP_SIZE;
+    canvas.height = CROP_SIZE;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const img = imgRef.current;
+    
+    // Exact matching math for the CSS object-fit behavior
+    const ratio = Math.max(CROP_SIZE / img.naturalWidth, CROP_SIZE / img.naturalHeight);
+    const baseWidth = img.naturalWidth * ratio;
+    const baseHeight = img.naturalHeight * ratio;
+
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, CROP_SIZE, CROP_SIZE);
+
+    ctx.translate(CROP_SIZE / 2, CROP_SIZE / 2);
+    ctx.translate(position.x, position.y);
+    ctx.scale(scale, scale);
+    
+    ctx.drawImage(img, -baseWidth / 2, -baseHeight / 2, baseWidth, baseHeight);
+
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const file = new File([blob], "adjusted_profile.jpg", { type: "image/jpeg" });
+      onConfirm(file, URL.createObjectURL(blob));
+    }, "image/jpeg", 0.95);
+  };
+
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm touch-none">
+      <div className="w-full max-w-sm rounded-3xl bg-white p-6 shadow-2xl dark:bg-slate-900">
+        <h3 className="text-center text-lg font-bold text-slate-900 dark:text-white">Adjust Photo</h3>
+        <p className="mb-5 text-center text-xs text-slate-500 flex items-center justify-center gap-1">
+          <Move className="h-3 w-3" /> Drag to reposition
+        </p>
+         
+        <div 
+          className={`relative mx-auto overflow-hidden rounded-full border-4 border-slate-100 bg-slate-100 shadow-inner dark:border-slate-800 dark:bg-slate-800 ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+          style={{ width: CROP_SIZE, height: CROP_SIZE }}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerLeave={handlePointerUp}
+        >
+          {/* 🟢 Image uses dynamically calculated dims to look normal initially */}
+          <img 
+            ref={imgRef}
+            src={src}
+            alt="Crop target"
+            draggable={false}
+            onLoad={handleImageLoad}
+            className="pointer-events-none"
+            style={{
+              position: 'absolute',
+              left: '50%',
+              top: '50%',
+              transform: `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px)) scale(${scale})`,
+              width: imgDims.width,
+              height: imgDims.height,
+              maxWidth: 'none',
+              maxHeight: 'none'
+            }}
+          />
+        </div>
+
+        {/* Zoom Slider */}
+        <div className="mt-6 px-4">
+          <label className="mb-2 block text-center text-[10px] font-bold uppercase tracking-wider text-slate-500">
+            Zoom
+          </label>
+          <input 
+            type="range" min="1" max="3" step="0.01" value={scale} 
+            onChange={(e) => setScale(Number(e.target.value))} 
+            className="w-full accent-cyan-600"
+          />
+        </div>
+
+        {/* Actions */}
+        <div className="mt-8 flex justify-between gap-3">
+          <button onClick={onCancel} className="flex-1 rounded-xl bg-slate-100 py-3 text-sm font-bold text-slate-600 transition hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700">
+            Cancel
+          </button>
+          <button onClick={handleConfirm} className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-cyan-600 py-3 text-sm font-bold text-white shadow-md transition hover:bg-cyan-700">
+            <CheckCircle2 className="h-4 w-4" /> Confirm
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+/* ========================================================================= */
+
+
 export default function AdminDoctorsPage() {
   const t = useTranslations("AdminDoctors");
   const locale = useLocale();
@@ -46,15 +189,15 @@ export default function AdminDoctorsPage() {
   const [pendingActionDoctor, setPendingActionDoctor] = useState<any>(null);
   const [actionType, setActionType] = useState<"verify" | "unverify" | "delete" | null>(null);
 
-  // 🟢 Edit / Create States
   const [showModal, setShowModal] = useState(false);
   const [editingDoctor, setEditingDoctor] = useState<AdminDoctorRecord | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [tempPhotoSrc, setTempPhotoSrc] = useState<string | null>(null); 
   const [removePhotoFlag, setRemovePhotoFlag] = useState(false);
 
-  // 1. Fetch ALL Doctors
   const { data: allDoctors = [], isLoading, isFetching, refetch } = useQuery({
     queryKey: ["adminAllDoctors"],
     queryFn: async () => {
@@ -63,8 +206,7 @@ export default function AdminDoctorsPage() {
     },
   });
 
-  // 2. Fetch Specializations
-  const { data: specializationsList = [], isLoading: isLoadingSpecs } = useQuery({
+  const { data: specializationsList = [] } = useQuery({
     queryKey: ["specializations"],
     queryFn: async () => {
       try {
@@ -85,8 +227,7 @@ export default function AdminDoctorsPage() {
     },
   });
 
-  // 3. Fetch Locations
-  const { data: locationsList = [], isLoading: isLoadingLocs } = useQuery({
+  const { data: locationsList = [] } = useQuery({
     queryKey: ["adminLocations"],
     queryFn: async () => {
       const res = await api.get("/locations"); 
@@ -102,7 +243,6 @@ export default function AdminDoctorsPage() {
     qualification: "", experience: "", fee: "",
   });
 
-  // 🟢 Reset Form Function
   const resetForm = () => {
     setFormData({
       nameEn: "", nameBn: "", nameHi: "", phone: "", email: "", password: "",
@@ -111,15 +251,14 @@ export default function AdminDoctorsPage() {
     });
     setPhotoFile(null);
     setPhotoPreview(null);
+    setTempPhotoSrc(null);
     setRemovePhotoFlag(false);
     setEditingDoctor(null);
     setShowModal(false);
   };
 
-  // 🟢 Handle Edit Click
   const openEditModal = (doc: AdminDoctorRecord) => {
     const parsed = parseMultiLangName(doc.user?.name);
-    // User the new logic to get avatar if profilePhoto is empty
     const existingPhoto = doc.profilePhoto || (doc.user as any)?.avatar || null;
     
     setFormData({
@@ -139,29 +278,26 @@ export default function AdminDoctorsPage() {
     });
     setPhotoFile(null);
     setPhotoPreview(existingPhoto);
+    setTempPhotoSrc(null);
     setRemovePhotoFlag(false);
     setEditingDoctor(doc);
     setShowModal(true);
   };
 
-  // 🟢 Handle Image Change
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      setPhotoFile(file);
-      setPhotoPreview(URL.createObjectURL(file));
-      setRemovePhotoFlag(false);
+      setTempPhotoSrc(URL.createObjectURL(file));
+      e.target.value = ''; 
     }
   };
 
-  // 🟢 Handle Remove Photo
   const handleRemovePhoto = () => {
     setPhotoFile(null);
     setPhotoPreview(null);
     setRemovePhotoFlag(true);
   };
 
-  // Filter Logic
   const filteredDoctors = useMemo(() => {
     return allDoctors.filter((doc: any) => {
       if (!searchQuery) return true;
@@ -178,7 +314,6 @@ export default function AdminDoctorsPage() {
     });
   }, [allDoctors, searchQuery]);
 
-  // Actions (Verify/Unverify/Delete)
   const toggleVerifyMutation = useMutation({
     mutationFn: async ({ id, type }: { id: string; type: "verify" | "unverify" }) => {
       const res = await api.patch(`/admin/doctors/${id}/${type}`);
@@ -214,7 +349,6 @@ export default function AdminDoctorsPage() {
     }
   };
 
-  // 🟢 Form Submit (Create & Edit using FormData)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -282,7 +416,22 @@ export default function AdminDoctorsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative">
+      
+      {/* 🟢 Cropper Modal */}
+      {tempPhotoSrc && (
+        <ProfileCropperModal 
+          src={tempPhotoSrc} 
+          onCancel={() => setTempPhotoSrc(null)}
+          onConfirm={(croppedFile, croppedUrl) => {
+            setPhotoFile(croppedFile);
+            setPhotoPreview(croppedUrl);
+            setRemovePhotoFlag(false);
+            setTempPhotoSrc(null);
+          }} 
+        />
+      )}
+
       {/* Header */}
       <GradientCard variant="cyan">
         <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
@@ -362,7 +511,6 @@ export default function AdminDoctorsPage() {
                                locale === "hi" && parsedName.hi ? parsedName.hi : 
                                parsedName.en;
                                
-              // 🟢 FIX: Prioritize profilePhoto, fallback to user.avatar
               const displayPhoto = doc.profilePhoto || doc.user?.avatar;
 
               return (
@@ -370,7 +518,6 @@ export default function AdminDoctorsPage() {
                   <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-start gap-3.5">
                       
-                      {/* 🟢 Profile Photo or Stethoscope Icon */}
                       {displayPhoto ? (
                         <img src={displayPhoto} alt="Doctor" className="h-10 w-10 shrink-0 rounded-xl object-cover shadow-xs border border-slate-200 dark:border-slate-700" />
                       ) : (
@@ -396,12 +543,11 @@ export default function AdminDoctorsPage() {
                           )}
                         </div>
 
-                        {/* Multi-language names preview */}
                         <div className="flex items-center gap-2 text-[10px] font-medium text-slate-400 dark:text-slate-500">
                           <Globe className="h-3 w-3" />
                           <span>EN: {parsedName.en}</span>
-                          {parsedName.bn && <span>• BN: {parsedName.bn}</span>}
-                          {parsedName.hi && <span>• HI: {parsedName.hi}</span>}
+                          {parsedName.bn && <span>BN: {parsedName.bn}</span>}
+                          {parsedName.hi && <span>HI: {parsedName.hi}</span>}
                         </div>
 
                         <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-slate-400 pt-1">
@@ -441,7 +587,6 @@ export default function AdminDoctorsPage() {
                       </div>
                     </div>
 
-                    {/* Action Buttons */}
                     <div className="flex shrink-0 items-center justify-end gap-2">
                       <button
                         type="button"
@@ -509,7 +654,6 @@ export default function AdminDoctorsPage() {
             
             <form onSubmit={handleSubmit} className="space-y-4 p-6">
               
-              {/* 🟢 Photo Upload & Remove Section */}
               <div className="flex flex-col items-center justify-center mb-6">
                 <label className="relative flex h-24 w-24 cursor-pointer items-center justify-center rounded-full border-2 border-dashed border-slate-300 bg-slate-50 transition hover:bg-slate-100 overflow-hidden dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700">
                   {photoPreview ? (
@@ -522,9 +666,7 @@ export default function AdminDoctorsPage() {
                   )}
                   <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
                 </label>
-                {photoFile && <p className="mt-2 text-[10px] text-slate-500">{photoFile.name}</p>}
                 
-                {/* 🟢 Remove Photo Button */}
                 {photoPreview && (
                   <button
                     type="button"
