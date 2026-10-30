@@ -11,6 +11,7 @@ import { useTranslations, useLocale } from "next-intl";
 import { useState, useEffect } from "react";
 import { useRouter } from "@/i18n/routing";
 import { fetchSearchLocations } from "@/lib/api";
+import VoiceSearchOverlay from "@/components/VoiceSearchOverlay";
 
 interface Location {
   id: string;
@@ -36,7 +37,7 @@ export default function Hero() {
   const [locations, setLocations] = useState<Location[]>([]);
   const [selectedLocation, setSelectedLocation] = useState("");
   const [isLoading, setIsLoading] = useState(true);
-  const [isListening, setIsListening] = useState(false);
+  const [voiceOpen, setVoiceOpen] = useState(false);
 
   useEffect(() => {
     setIsLoading(true);
@@ -88,62 +89,13 @@ export default function Hero() {
      VOICE SEARCH
   ========================= */
 
-  function startVoiceSearch() {
-    if (typeof window === "undefined") return;
-
-    const SpeechRecognition =
-      (window as any).SpeechRecognition ||
-      (window as any).webkitSpeechRecognition;
-
-    if (!SpeechRecognition) {
-      alert(
-        "Voice search is not supported in this browser."
-      );
-      return;
-    }
-
-    const recognition = new SpeechRecognition();
-
-    recognition.lang =
-      locale === "bn"
-        ? "bn-IN"
-        : locale === "hi"
-        ? "hi-IN"
-        : "en-IN";
-
-    recognition.interimResults = false;
-    recognition.continuous = false;
-
-    setIsListening(true);
-
-    recognition.onresult = (event: any) => {
-      const transcript =
-        event.results?.[0]?.[0]?.transcript || "";
-
-      const value = transcript.trim();
-
-      if (value) {
-        setQuery(value);
-
-        /*
-         * Small delay gives the input time to update,
-         * then automatically performs the search.
-         */
-        setTimeout(() => {
-          runSearch(value, selectedLocation);
-        }, 250);
-      }
-    };
-
-    recognition.onerror = () => {
-      setIsListening(false);
-    };
-
-    recognition.onend = () => {
-      setIsListening(false);
-    };
-
-    recognition.start();
+  // Called by the full-screen "Listening…" overlay with the final spoken text
+  function handleVoiceResult(value: string) {
+    const v = value.trim();
+    setVoiceOpen(false);
+    if (!v) return;
+    setQuery(v);
+    runSearch(v, selectedLocation);
   }
 
   return (
@@ -167,6 +119,14 @@ export default function Hero() {
         dark:to-[var(--color-bg)]
       "
     >
+      {/* Full-screen voice search layout (rendered in a portal) */}
+      <VoiceSearchOverlay
+        open={voiceOpen}
+        onClose={() => setVoiceOpen(false)}
+        onResult={handleVoiceResult}
+        locale={locale}
+      />
+
       {/* =========================
           BACKGROUND AMBIENCE
       ========================= */}
@@ -473,7 +433,7 @@ export default function Hero() {
 
                 <button
                   type="button"
-                  onClick={startVoiceSearch}
+                  onClick={() => setVoiceOpen(true)}
                   aria-label="Voice search"
                   className={`
                     ml-1.5
@@ -486,7 +446,7 @@ export default function Hero() {
                     rounded-full
                     transition-all
                     ${
-                      isListening
+                      voiceOpen
                         ? "bg-[#1C63E7] text-white shadow-md"
                         : "text-[#1C63E7] hover:bg-blue-50"
                     }
@@ -495,7 +455,7 @@ export default function Hero() {
                 >
                   <Mic
                     className={`h-4 w-4 ${
-                      isListening
+                      voiceOpen
                         ? "animate-pulse"
                         : ""
                     }`}
