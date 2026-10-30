@@ -11,6 +11,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useClinicProfile, useClinicDoctors, useAddDoctor, useEditDoctor, type ClinicDoctor } from "@/lib/hooks/useClinic";
 import { api } from "@/lib/api";
 import { toast } from "react-hot-toast";
+import MultiSpecializationSelect from "@/components/MultiSpecializationSelect";
 
 const DAYS_OF_WEEK = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"];
 const WEEKS = [{ label: "1st", val: 1 }, { label: "2nd", val: 2 }, { label: "3rd", val: 3 }, { label: "4th", val: 4 }, { label: "Last", val: "LAST" }];
@@ -24,10 +25,27 @@ const parseMultiLangName = (rawName: string = "") => {
   };
 };
 
+// Work out which specialization IDs a doctor already has.
+// 1) real relation (doctor.specializations)  2) fallback: match the old
+// comma-separated text ("Gynecologist, General Physician") against the list.
+const resolveSpecIds = (doctor: any, all: any[]): string[] => {
+  const fromRelation = (doctor?.specializations || [])
+    .map((x: any) => x?.specializationId || x?.specialization?.id)
+    .filter(Boolean);
+  if (fromRelation.length > 0) return Array.from(new Set(fromRelation as string[]));
+
+  const text: string = doctor?.specialization || "";
+  if (!text.trim()) return [];
+  const names = text.split(",").map((n) => n.trim().toLowerCase()).filter(Boolean);
+  return all
+    .filter((s) => names.includes(String(s.name).trim().toLowerCase()))
+    .map((s) => s.id);
+};
+
 const EMPTY_ADD = {
   nameEn: "", nameBn: "", nameHi: "", email: "", password: "", phone: "", 
   medicalSystem: "ALLOPATHY", 
-  specialization: "", qualification: "", experience: "", fee: "",
+  specializationIds: [] as string[], qualification: "", experience: "", fee: "",
   startTime: "", endTime: "", capacity: "20",
   recurrenceType: "DAILY", recurrenceDays: [] as string[], recurrenceDate: "1", recurrenceWeek: "1", recurrenceWeekday: "SUNDAY", specificDate: ""
 };
@@ -87,7 +105,10 @@ export default function ClinicDoctorsPage() {
           nameHi: pName.hi || prev.nameHi,
           phone: foundDoctor.user?.phone || prev.phone,
           medicalSystem: foundDoctor.medicalSystem || prev.medicalSystem, 
-          specialization: foundDoctor.specialization || prev.specialization,
+          specializationIds: (() => {
+            const ids = resolveSpecIds(foundDoctor, specializations);
+            return ids.length > 0 ? ids : prev.specializationIds;
+          })(),
           qualification: foundDoctor.qualification || prev.qualification,
           experience: foundDoctor.experience ? String(foundDoctor.experience) : prev.experience,
           fee: foundDoctor.fee ? String(foundDoctor.fee) : prev.fee,
@@ -132,7 +153,7 @@ export default function ClinicDoctorsPage() {
       password: form.password ? form.password : undefined,
       phone: form.phone || undefined,
       medicalSystem: form.medicalSystem,
-      specialization: form.specialization || undefined,
+      specializationIds: form.specializationIds.length > 0 ? form.specializationIds : undefined,
       qualification: form.qualification || undefined,
       experience: form.experience ? Number(form.experience) : undefined,
       fee: form.fee ? Number(form.fee) : undefined,
@@ -253,10 +274,12 @@ export default function ClinicDoctorsPage() {
               </Field>
 
               <Field label={tDoc("specialization")}>
-                <select value={form.specialization} onChange={(e) => setForm({ ...form, specialization: e.target.value })} className={inputClasses}>
-                  <option value="">-- Select Category --</option>
-                  {specializations.map((spec) => (<option key={spec.id} value={spec.name}>{spec.nameEn || spec.name}</option>))}
-                </select>
+                <MultiSpecializationSelect
+                  options={specializations}
+                  value={form.specializationIds}
+                  onChange={(ids) => setForm({ ...form, specializationIds: ids })}
+                  placeholder="Select one or more"
+                />
               </Field>
               <Field label={tDoc("qualification")}><input type="text" value={form.qualification} onChange={(e) => setForm({ ...form, qualification: e.target.value })} className={inputClasses} placeholder="e.g. MBBS, MD" /></Field>
               <Field label={tDoc("experience")}><input type="number" min={0} value={form.experience} onChange={(e) => setForm({ ...form, experience: e.target.value })} className={inputClasses} placeholder="Years" /></Field>
@@ -359,11 +382,20 @@ function DoctorRow({ doctor, clinicId, specializations, locale, refetch }: { doc
 
   const [form, setForm] = useState({
     medicalSystem: (doctor as any).medicalSystem ?? "ALLOPATHY",
-    specialization: doctor.specialization ?? "", qualification: doctor.qualification ?? "",
+    specializationIds: resolveSpecIds(doctor, specializations),
+    qualification: doctor.qualification ?? "",
     experience: doctor.experience?.toString() ?? "", fee: doctor.fee?.toString() ?? "",
   });
 
   const docAny = doctor as any;
+  // Names to show on the card: real relation first, else the legacy text split by comma
+  const specNames: string[] = (() => {
+    const rel = (docAny.specializations || [])
+      .map((x: any) => x?.specialization?.nameEn || x?.specialization?.name)
+      .filter(Boolean);
+    if (rel.length > 0) return rel;
+    return (doctor.specialization || "").split(",").map((n) => n.trim()).filter(Boolean);
+  })();
   const photo = docAny.user?.avatar || docAny.profilePhoto || null;
   
   const parsedName = parseMultiLangName(doctor.user.name);
@@ -376,7 +408,8 @@ function DoctorRow({ doctor, clinicId, specializations, locale, refetch }: { doc
     const payload: any = {
       doctorId: doctor.id,
       medicalSystem: form.medicalSystem, 
-      specialization: form.specialization || undefined,
+      // always send the array: [] means "remove all specializations"
+      specializationIds: form.specializationIds,
       qualification: form.qualification || undefined,
       experience: form.experience ? Number(form.experience) : undefined,
       fee: form.fee ? Number(form.fee) : undefined,
@@ -432,7 +465,15 @@ function DoctorRow({ doctor, clinicId, specializations, locale, refetch }: { doc
             <div className="mt-1 flex items-center gap-2">
               <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">{(doctor as any).medicalSystem}</span>
               <span className="text-slate-300">•</span>
-              <span className="text-xs font-medium text-slate-500">{doctor.specialization || "General"}</span>
+            </div>
+            <div className="mt-1.5 flex flex-wrap gap-1">
+              {specNames.length > 0 ? (
+                specNames.map((n) => (
+                  <span key={n} className="rounded-md bg-[#14B8A6]/10 px-1.5 py-0.5 text-[10px] font-bold text-[#0f766e] dark:bg-[#14B8A6]/20 dark:text-teal-300">{n}</span>
+                ))
+              ) : (
+                <span className="text-xs font-medium text-slate-500">General</span>
+              )}
             </div>
             
             <div className="mt-1.5 flex items-center gap-1.5 text-[9px] font-medium text-slate-400 dark:text-slate-500">
@@ -467,7 +508,7 @@ function DoctorRow({ doctor, clinicId, specializations, locale, refetch }: { doc
           <button onClick={() => { setShowSchedules(!showSchedules); setEditing(false); }} className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all ${showSchedules ? "bg-[#14B8A6] text-white shadow-sm" : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400"}`}>
             <CalendarDays className="h-4 w-4" /> Sessions
           </button>
-          <button onClick={() => { setEditing(!editing); setShowSchedules(false); }} className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all ${editing ? "bg-[#252a67] text-white shadow-sm" : "bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400"}`}>
+          <button onClick={() => { if (!editing) setForm((f) => ({ ...f, specializationIds: resolveSpecIds(doctor, specializations) })); setEditing(!editing); setShowSchedules(false); }} className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all ${editing ? "bg-[#252a67] text-white shadow-sm" : "bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400"}`}>
             <Edit2 className="h-4 w-4" /> Edit Profile
           </button>
           <button onClick={handleRemoveDoctor} disabled={isRemoving} className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400">
@@ -488,21 +529,20 @@ function DoctorRow({ doctor, clinicId, specializations, locale, refetch }: { doc
 
         {editing && (
           <form onSubmit={handleSave} className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Medical System">
-                <select value={form.medicalSystem} onChange={(e) => setForm({ ...form, medicalSystem: e.target.value })} className={`${inputClasses} py-2.5`}>
-                  <option value="ALLOPATHY">Allopathy</option>
-                  <option value="HOMEOPATHY">Homeopathy</option>
-                  <option value="AYURVEDA">Ayurveda</option>
-                </select>
-              </Field>
-              <Field label="Specialization">
-                <select value={form.specialization} onChange={(e) => setForm({ ...form, specialization: e.target.value })} className={`${inputClasses} py-2.5`}>
-                  <option value="">Select Category</option>
-                  {specializations.map((spec) => (<option key={spec.id} value={spec.name}>{spec.nameEn || spec.name}</option>))}
-                </select>
-              </Field>
-            </div>
+            <Field label="Medical System">
+              <select value={form.medicalSystem} onChange={(e) => setForm({ ...form, medicalSystem: e.target.value })} className={`${inputClasses} py-2.5`}>
+                <option value="ALLOPATHY">Allopathy</option>
+                <option value="HOMEOPATHY">Homeopathy</option>
+                <option value="AYURVEDA">Ayurveda</option>
+              </select>
+            </Field>
+            <Field label="Specializations (you can pick more than one)">
+              <MultiSpecializationSelect
+                options={specializations}
+                value={form.specializationIds}
+                onChange={(ids) => setForm({ ...form, specializationIds: ids })}
+              />
+            </Field>
             <div className="grid grid-cols-3 gap-3">
               <Field label="Qualification"><input value={form.qualification} onChange={(e) => setForm({ ...form, qualification: e.target.value })} className={`${inputClasses} py-2.5`} placeholder="MBBS" /></Field>
               <Field label="Exp (Yrs)"><input type="number" value={form.experience} onChange={(e) => setForm({ ...form, experience: e.target.value })} className={`${inputClasses} py-2.5`} /></Field>

@@ -28,6 +28,24 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { toast } from "react-hot-toast";
 import type { AdminDoctorRecord } from "@doctor-contract/shared";
+import MultiSpecializationSelect from "@/components/MultiSpecializationSelect";
+
+// Which specialization IDs does a doctor already have?
+// 1) real relation (doc.specializations)  2) fallback: match the old
+// comma-separated text ("Gynecologist, General Physician") against the list.
+const resolveSpecIds = (doc: any, all: any[]): string[] => {
+  const fromRelation = (doc?.specializations || [])
+    .map((x: any) => x?.specializationId || x?.specialization?.id)
+    .filter(Boolean);
+  if (fromRelation.length > 0) return Array.from(new Set(fromRelation as string[]));
+
+  const text: string = doc?.specialization || "";
+  if (!text.trim()) return [];
+  const names = text.split(",").map((n) => n.trim().toLowerCase()).filter(Boolean);
+  return all
+    .filter((s: any) => names.includes(String(s.name).trim().toLowerCase()))
+    .map((s: any) => s.id);
+};
 
 // 🟢 Multi-Language Name Parser
 const parseMultiLangName = (rawName: string = "") => {
@@ -239,7 +257,7 @@ export default function AdminDoctorsPage() {
     nameEn: "", nameBn: "", nameHi: "",
     phone: "", email: "", password: "",
     medicalSystem: "ALLOPATHY", 
-    specializationId: "", specializationName: "", city: "", 
+    specializationIds: [] as string[], city: "", 
     qualification: "", experience: "", fee: "",
   });
 
@@ -247,7 +265,7 @@ export default function AdminDoctorsPage() {
     setFormData({
       nameEn: "", nameBn: "", nameHi: "", phone: "", email: "", password: "",
       medicalSystem: "ALLOPATHY",
-      specializationId: "", specializationName: "", city: "", qualification: "", experience: "", fee: "",
+      specializationIds: [] as string[], city: "", qualification: "", experience: "", fee: "",
     });
     setPhotoFile(null);
     setPhotoPreview(null);
@@ -269,8 +287,7 @@ export default function AdminDoctorsPage() {
       phone: doc.user?.phone || "",
       password: "", 
       medicalSystem: (doc as any).medicalSystem || "ALLOPATHY",
-      specializationId: "", 
-      specializationName: doc.specialization || "",
+      specializationIds: resolveSpecIds(doc, specializationsList),
       city: doc.clinic?.city || "",
       qualification: doc.qualification || "",
       experience: doc.experience ? String(doc.experience) : "",
@@ -358,8 +375,8 @@ export default function AdminDoctorsPage() {
     if (!editingDoctor && !formData.password) {
       toast.error("Password is required to create a new doctor."); return;
     }
-    if (!editingDoctor && !formData.specializationId) {
-      toast.error("Specialization is required for new doctors."); return;
+    if (!editingDoctor && formData.specializationIds.length === 0) {
+      toast.error("Select at least one specialization for a new doctor."); return;
     }
     if (!formData.phone && !formData.email) {
       toast.error("Please provide either an Email Address or a Phone Number."); return;
@@ -377,6 +394,8 @@ export default function AdminDoctorsPage() {
     if (formData.experience) payload.append("experience", formData.experience);
     if (formData.fee) payload.append("fee", formData.fee);
     if (formData.city) payload.append("city", formData.city);
+    // Always sent as JSON text; "[]" on edit means "remove all specializations"
+    payload.append("specializationIds", JSON.stringify(formData.specializationIds));
     
     if (photoFile) {
       payload.append("photo", photoFile);
@@ -388,17 +407,12 @@ export default function AdminDoctorsPage() {
       setIsSubmitting(true);
 
       if (editingDoctor) {
-        if (formData.specializationName) {
-          payload.append("specialization", formData.specializationName);
-        }
         await api.patch(`/admin/doctors/${editingDoctor.id}/edit`, payload, {
           headers: { "Content-Type": "multipart/form-data" }
         });
         toast.success("Doctor profile updated successfully!");
       } else {
         payload.append("password", formData.password);
-        payload.append("specialization", formData.specializationName);
-        payload.append("specializationIds", formData.specializationId);
 
         await api.post("/admin/doctors", payload, {
           headers: { "Content-Type": "multipart/form-data" }
@@ -713,22 +727,12 @@ export default function AdminDoctorsPage() {
                 )}
                 
                 <div className={editingDoctor ? "col-span-2" : ""}>
-                  <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500">Specialization</label>
-                  <div className="flex gap-2">
-                    {!editingDoctor && (
-                      <select required value={formData.specializationId} onChange={(e) => {
-                          const id = e.target.value;
-                          const spec = specializationsList.find((s: any) => s.id === id);
-                          setFormData({ ...formData, specializationId: id, specializationName: spec?.name || "" });
-                        }} className="w-1/2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none transition dark:border-slate-700 dark:bg-slate-800 dark:text-white">
-                        <option value="" disabled>Select specialization</option>
-                        {specializationsList.map((spec: any) => (
-                          <option key={spec.id} value={spec.id}>{spec.nameEn || spec.name}</option>
-                        ))}
-                      </select>
-                    )}
-                    <input type="text" value={formData.specializationName} onChange={(e) => setFormData({...formData, specializationName: e.target.value})} placeholder="Type custom specialization..." className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm outline-none transition dark:border-slate-700 dark:bg-slate-800 dark:text-white" />
-                  </div>
+                  <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500">Specializations (pick one or more)</label>
+                  <MultiSpecializationSelect
+                    options={specializationsList}
+                    value={formData.specializationIds}
+                    onChange={(ids) => setFormData({ ...formData, specializationIds: ids })}
+                  />
                 </div>
               </div>
 

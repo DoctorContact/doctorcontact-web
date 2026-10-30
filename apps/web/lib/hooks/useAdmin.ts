@@ -207,6 +207,7 @@ export interface CreateDoctorInput {
   password: string;
   clinicId?: string; // optional — a doctor can be added without a clinic
   specialization?: string;
+  specializationIds?: string[]; // a doctor can have many specializations
   qualification?: string;
   experience?: number;
   fee?: number;

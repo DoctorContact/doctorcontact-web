@@ -7,6 +7,7 @@ import { X, Loader2, Stethoscope } from "lucide-react";
 
 import { api } from "@/lib/api";
 import { useCreateDoctor } from "@/lib/hooks/useAdmin";
+import MultiSpecializationSelect from "@/components/MultiSpecializationSelect";
 
 interface ClinicOpt {
   id: string;
@@ -25,13 +26,23 @@ export default function AddDoctorModal({ onClose }: { onClose: () => void }) {
     },
   });
 
+  const { data: specializations = [] } = useQuery<any[]>({
+    queryKey: ["specializations", "options"],
+    queryFn: async () => {
+      const res = await api.get("/specializations");
+      const raw = res.data?.data?.specializations ?? res.data?.data?.items ?? res.data?.data ?? [];
+      return Array.isArray(raw) ? raw : [];
+    },
+  });
+
+  const [specializationIds, setSpecializationIds] = useState<string[]>([]);
+
   const [form, setForm] = useState({
     name: "",
     email: "",
     phone: "",
     password: "",
     clinicId: "",
-    specialization: "",
     qualification: "",
     experience: "",
     fee: "",
@@ -51,7 +62,7 @@ export default function AddDoctorModal({ onClose }: { onClose: () => void }) {
         phone: form.phone.trim() || undefined,
         password: form.password,
         clinicId: form.clinicId || undefined,
-        specialization: form.specialization.trim() || undefined,
+        specializationIds: specializationIds.length > 0 ? specializationIds : undefined,
         qualification: form.qualification.trim() || undefined,
         experience: form.experience ? Number(form.experience) : undefined,
         fee: form.fee ? Number(form.fee) : undefined,
@@ -94,10 +105,15 @@ export default function AddDoctorModal({ onClose }: { onClose: () => void }) {
             </select>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <input className={input} placeholder="Specialization" value={form.specialization} onChange={(e) => set("specialization", e.target.value)} />
-            <input className={input} placeholder="Qualification" value={form.qualification} onChange={(e) => set("qualification", e.target.value)} />
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-slate-500">Specializations (you can pick more than one)</label>
+            <MultiSpecializationSelect
+              options={specializations}
+              value={specializationIds}
+              onChange={setSpecializationIds}
+            />
           </div>
+          <input className={input} placeholder="Qualification" value={form.qualification} onChange={(e) => set("qualification", e.target.value)} />
           <div className="grid grid-cols-2 gap-3">
             <input className={input} type="number" placeholder="Experience (yrs)" value={form.experience} onChange={(e) => set("experience", e.target.value)} />
             <input className={input} type="number" placeholder="Fee (₹)" value={form.fee} onChange={(e) => set("fee", e.target.value)} />

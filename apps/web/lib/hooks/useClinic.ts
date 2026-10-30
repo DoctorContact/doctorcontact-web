@@ -19,6 +19,11 @@ export type Clinic = {
 export type ClinicDoctor = {
   id: string;
   specialization: string | null;
+  // A doctor can have many specializations (e.g. Gynecologist + General Physician)
+  specializations?: {
+    specializationId: string;
+    specialization: { id: string; name: string; nameEn?: string };
+  }[];
   qualification: string | null;
   experience: number | null;
   fee: number | null;
@@ -127,6 +132,7 @@ export function useAddDoctor() {
       password: string;
       phone?: string;
       specialization?: string;
+      specializationIds?: string[];
       qualification?: string;
       experience?: number;
       fee?: number;
@@ -146,6 +152,7 @@ export function useEditDoctor() {
       doctorId: string;
       startTime?: string;
       specialization?: string;
+      specializationIds?: string[];
       qualification?: string;
       experience?: number;
       fee?: number;
