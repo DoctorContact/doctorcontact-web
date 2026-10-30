@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 
 import DoctorGrid from "@/components/DoctorGrid";
+import SpecializationCombobox from "@/components/SpecializationCombobox";
 import { useLocationCity } from "@/lib/hooks/useLocationCity";
 import { fetchSearchLocations } from "@/lib/api";
 
@@ -297,6 +298,10 @@ function DoctorsPageContent() {
                   <button type="button" onClick={clearSearch} className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-white"><X className="h-3.5 w-3.5" /></button>
                 )}
               </div>
+            </div>
+
+            <div className="mt-3">
+              <SpecializationCombobox value={query} onChange={setQuery} />
             </div>
 
             <div className="mt-3 flex min-w-0 items-center gap-2 overflow-hidden px-1">

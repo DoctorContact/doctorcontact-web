@@ -22,7 +22,7 @@ import { ExtendedDoctor } from "@/types/doctor";
    HELPERS
 ========================================================= */
 
-// ছবির ইনিশিয়ালের জন্য শুধু ইংরেজি নামটা বের করার হেল্পার
+// ছবির ইনিশিয়ালের জন্য শুধু ইংরেজি নামটা বের করার হেল্পার
 const parseEnglishName = (rawName: string = "") => {
   const parts = rawName.split(" | ");
   return parts[0]?.trim() || rawName;
@@ -76,11 +76,11 @@ const MarqueeText = ({
 };
 
 /* =========================================================
-   DOCTOR CARD (Now exactly matches ClinicCard dimensions)
+   DOCTOR CARD (🟢 3px Gradient Border + Full Photo)
 ========================================================= */
 
 function AllDoctorCard({ doctor }: { doctor: ExtendedDoctor }) {
-  // পুরো ৩ ভাষার নামটাই নেব, যাতে স্ক্রল করার সময় পুরোটাই দেখায়
+  // পুরো ৩ ভাষার নামটাই নেব, যাতে স্ক্রল করার সময় পুরোটাই দেখায়
   const rawName = doctor.user?.name || "Doctor";
   const displayFullname = rawName.toLowerCase().startsWith("dr") ? rawName : `Dr. ${rawName}`;
   
@@ -98,21 +98,23 @@ function AllDoctorCard({ doctor }: { doctor: ExtendedDoctor }) {
       className="
         group
         block
-        w-[calc((100vw-58px)/2)]
-        min-w-[calc((100vw-58px)/2)]
         shrink-0
         snap-start
         overflow-hidden
-        rounded-[18px]
-        border
-        border-slate-200/80
-        bg-white
+        rounded-[21px]
+        
+        /* 🟢 3px Gradient Border Setup */
+        p-[3px]
+        bg-gradient-to-br from-[#1C63E7] via-[#3156A5] to-[#14B8A6]
+        
         shadow-[0_4px_18px_rgba(15,27,51,0.06)]
         transition-all
         duration-300
-        hover:-translate-y-1
-        hover:border-[#1C63E7]/25
-        hover:shadow-[0_12px_30px_rgba(28,99,231,0.12)]
+        hover:-translate-y-1.5
+        hover:shadow-[0_12px_30px_rgba(28,99,231,0.18)]
+        
+        w-[calc((100vw-58px)/2)]
+        min-w-[calc((100vw-58px)/2)]
         sm:w-[190px]
         sm:min-w-[190px]
         md:w-[205px]
@@ -121,70 +123,73 @@ function AllDoctorCard({ doctor }: { doctor: ExtendedDoctor }) {
         lg:min-w-[225px]
         xl:w-[235px]
         xl:min-w-[235px]
-        dark:bg-surface
-        dark:border-soft-200
       "
     >
-      {/* ================= IMAGE ================= */}
-      <div className="relative h-[135px] overflow-hidden bg-slate-100 sm:h-[140px] lg:h-[145px]">
-        {avatar && !broken ? (
-          <img
-            src={avatar}
-            alt={rawName}
-            onError={() => setBroken(true)}
-            className="h-full w-full object-cover object-top transition-transform duration-700 group-hover:scale-[1.05]"
-          />
-        ) : (
-          <div className="flex h-full w-full flex-col items-center justify-center bg-gradient-to-br from-[#1C63E7] via-[#3156A5] to-[#14B8A6]">
-            <span className="text-2xl font-extrabold text-white">{initials(rawName)}</span>
-          </div>
-        )}
+      {/* 🟢 Inner White Card content */}
+      <div className="relative flex h-full flex-col overflow-hidden rounded-[18px] bg-white dark:bg-surface">
         
-        {/* Image overlay */}
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/5 via-transparent to-black/30" />
-        
-        {/* Rating Badge */}
-        {rating != null && (
-          <div className="absolute right-2.5 top-2.5 flex items-center gap-1 rounded-full border border-white/25 bg-[#0F1B33]/70 px-2 py-1 text-[9px] font-bold text-white shadow-sm backdrop-blur-md">
-            <Star className="h-2.5 w-2.5 fill-amber-400 text-amber-400" /> {rating}
-          </div>
-        )}
-      </div>
-
-      {/* ================= DOCTOR INFO ================= */}
-      <div className="relative bg-white px-3.5 pb-3.5 pt-3 dark:bg-surface">
-        {/* Small accent */}
-        <div className="absolute -top-[2px] left-3.5 h-[3px] w-8 rounded-full bg-gradient-to-r from-[#1C63E7] to-[#14B8A6]" />
-        
-        {/* Doctor Name - 🟢 Marquee (Auto Scrolls if Long) */}
-        <div className="w-full overflow-hidden pt-0.5">
-          <MarqueeText 
-            text={displayFullname} 
-            minChars={18}
-            className="text-[13px] font-extrabold leading-tight tracking-[-0.01em] text-[#0F1B33] dark:text-ink-900" 
-          />
+        {/* ================= IMAGE ================= */}
+        <div className="relative h-[135px] overflow-hidden bg-slate-50 sm:h-[140px] lg:h-[145px] dark:bg-slate-800">
+          {avatar && !broken ? (
+            <img
+              src={avatar}
+              alt={rawName}
+              onError={() => setBroken(true)}
+              // 🟢 object-contain and padding so the whole image fits without cropping
+              className="h-full w-full object-contain p-2 transition-transform duration-700 group-hover:scale-[1.05]"
+            />
+          ) : (
+            <div className="flex h-full w-full flex-col items-center justify-center bg-gradient-to-br from-[#1C63E7] via-[#3156A5] to-[#14B8A6]">
+              <span className="text-2xl font-extrabold text-white">{initials(rawName)}</span>
+            </div>
+          )}
+          
+          {/* Image overlay */}
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/5 via-transparent to-black/10" />
+          
+          {/* Rating Badge */}
+          {rating != null && (
+            <div className="absolute right-2.5 top-2.5 flex items-center gap-1 rounded-full border border-white/25 bg-[#0F1B33]/70 px-2 py-1 text-[9px] font-bold text-white shadow-sm backdrop-blur-md">
+              <Star className="h-2.5 w-2.5 fill-amber-400 text-amber-400" /> {rating}
+            </div>
+          )}
         </div>
 
-        {/* Specialization */}
-        <p className="mt-1 text-[10px] font-bold text-[#1C63E7] dark:text-indigo-500 truncate">
-          {specialization}
-        </p>
-
-        {/* Location */}
-        {location && (
-          <div className="mt-1.5 flex min-w-0 items-center gap-1">
-            <MapPin className="h-3 w-3 shrink-0 text-[#16A34A]" />
-            <span className="truncate text-[9px] font-medium text-slate-500 dark:text-ink-500">{location}</span>
+        {/* ================= DOCTOR INFO ================= */}
+        <div className="relative flex flex-1 flex-col px-3.5 pb-3.5 pt-3">
+          
+          {/* Doctor Name - Marquee (Auto Scrolls if Long) */}
+          <div className="w-full overflow-hidden pt-0.5">
+            <MarqueeText 
+              text={displayFullname} 
+              minChars={18}
+              className="text-[13px] font-extrabold leading-tight tracking-[-0.01em] text-[#0F1B33] dark:text-white" 
+            />
           </div>
-        )}
 
-        {/* Fee Section (replaces specialties tags from ClinicCard) */}
-        {fee != null && (
-          <div className="mt-2.5 flex items-center justify-between border-t border-slate-100 pt-2 dark:border-soft-200">
-            <span className="text-[10px] font-medium text-slate-500 dark:text-ink-500">Consultation</span>
-            <span className="text-[11px] font-extrabold text-[#0F1B33] dark:text-ink-900">₹{fee}</span>
+          {/* Specialization */}
+          <p className="mt-1 text-[10px] font-bold text-[#1C63E7] dark:text-indigo-400 truncate">
+            {specialization}
+          </p>
+
+          {/* Location */}
+          {location && (
+            <div className="mt-1.5 flex min-w-0 items-center gap-1">
+              <MapPin className="h-3 w-3 shrink-0 text-[#16A34A]" />
+              <span className="truncate text-[9px] font-medium text-slate-500 dark:text-slate-400">{location}</span>
+            </div>
+          )}
+
+          {/* Fee Section */}
+          <div className="mt-auto">
+            {fee != null && (
+              <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2.5 dark:border-slate-800">
+                <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">Consultation</span>
+                <span className="text-[11px] font-extrabold text-[#0F1B33] dark:text-white">₹{fee}</span>
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
     </Link>
   );
@@ -329,7 +334,7 @@ export default function AllDoctors() {
                   ${
                     selected
                       ? "bg-[#1C63E7] text-white shadow-[0_5px_14px_rgba(28,99,231,0.20)]"
-                      : "border border-slate-200 bg-white text-slate-600 hover:border-[#1C63E7]/40 hover:text-[#1C63E7] dark:border-soft-300 dark:bg-surface dark:text-ink-600"
+                      : "border border-slate-200 bg-white text-slate-600 hover:border-[#1C63E7]/40 hover:text-[#1C63E7] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400"
                   }
                 `}
               >
@@ -376,8 +381,9 @@ export default function AllDoctors() {
             hover:border-[#1C63E7]/30
             hover:text-[#1C63E7]
             active:scale-95
-            dark:border-soft-300
-            dark:bg-surface
+            dark:border-slate-700
+            dark:bg-slate-800
+            dark:text-slate-300
           "
         >
           <ChevronLeft className="h-4 w-4" />
@@ -411,8 +417,9 @@ export default function AllDoctors() {
             hover:border-[#1C63E7]/30
             hover:text-[#1C63E7]
             active:scale-95
-            dark:border-soft-300
-            dark:bg-surface
+            dark:border-slate-700
+            dark:bg-slate-800
+            dark:text-slate-300
           "
         >
           <ChevronRight className="h-4 w-4" />
@@ -429,13 +436,13 @@ export default function AllDoctors() {
                   w-[calc((100vw-58px)/2)]
                   shrink-0
                   animate-pulse
-                  rounded-[18px]
+                  rounded-[21px]
                   bg-slate-100
                   sm:w-[190px]
                   md:w-[205px]
                   lg:w-[225px]
                   xl:w-[235px]
-                  dark:bg-surface
+                  dark:bg-slate-800
                 "
               />
             ))}
@@ -445,11 +452,11 @@ export default function AllDoctors() {
             ref={scrollRef}
             className="
               flex
-              gap-3
+              gap-4
               overflow-x-auto
               overflow-y-hidden
               px-1
-              py-2
+              py-3
               no-scrollbar
               scroll-smooth
               snap-x

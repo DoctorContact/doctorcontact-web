@@ -1,574 +1,596 @@
+
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import {
   Star,
   Heart,
   BadgeCheck,
+  CalendarCheck,
+  Sparkles,
   MapPin,
+  Radio,
+  Check,
   ArrowRight,
-  BriefcaseBusiness,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
-import { Link } from "@/i18n/routing";
-import { usePublicFeaturedDoctors } from "@/lib/hooks/usePublicDirectory";
-import SectionHeader from "@/components/SectionHeader";
 import { ExtendedDoctor } from "@/types/doctor";
+import { usePublicFeaturedDoctors } from "@/lib/hooks/usePublicDirectory";
+import { Link, useRouter } from "@/i18n/routing";
+import { useAuth } from "@/lib/auth-context";
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
+const parseEnglishName = (rawName: string = "") => {
+  const parts = rawName.split(" | ");
+  return parts[0]?.trim() || rawName;
+};
 
 function initials(name?: string) {
   if (!name) return "DR";
 
-  return name
+  const englishPart = parseEnglishName(name);
+
+  return englishPart
     .replace(/^dr\.?\s*/i, "")
     .split(" ")
     .filter(Boolean)
-    .map((p) => p[0])
+    .map((part) => part[0])
     .slice(0, 2)
     .join("")
     .toUpperCase();
 }
+
+/* =========================================================
+   MARQUEE TEXT
+========================================================= */
+
+const MarqueeText = ({
+  text,
+  className,
+  minChars = 15,
+}: {
+  text: string;
+  className?: string;
+  minChars?: number;
+}) => {
+  const isLong = text.length > minChars;
+
+  if (!isLong) {
+    return (
+      <div className={`truncate whitespace-nowrap ${className}`}>
+        {text}
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full overflow-hidden">
+      <div
+        className="flex w-max whitespace-nowrap"
+        style={{ animation: "marqueeScroll 10s linear infinite" }}
+      >
+        <span className={className}>{text}</span>
+        <span className={`mx-4 opacity-0 ${className}`}>|</span>
+        <span className={className}>{text}</span>
+        <span className={`mx-4 opacity-0 ${className}`}>|</span>
+      </div>
+    </div>
+  );
+};
+
+/* =========================================================
+   FEATURED DOCTOR CARD
+========================================================= */
 
 function FeaturedDoctorCard({
   doctor,
 }: {
   doctor: ExtendedDoctor;
 }) {
+  const t = useTranslations("DoctorSearch");
+  const { user } = useAuth();
+  const router = useRouter();
+
   const [isFavorite, setIsFavorite] = useState(false);
 
-  const name = doctor.user?.name || "Doctor";
-  const specialization =
-    doctor.specialization || "General Physician";
+  function handleBookClick() {
+    if (!user) {
+      router.push(`/login?redirect=/doctors/${doctor.id}`);
+      return;
+    }
 
-  const experience = doctor.experience ?? 0;
-  const rating = doctor.rating ?? null;
-  const reviews = doctor.reviewCount ?? null;
+    router.push(`/doctors/${doctor.id}`);
+  }
 
-  const avatar =
+  const experienceYears = doctor.experience ?? 0;
+  const rating = doctor.rating ?? 4.5;
+  const reviews = doctor.reviewCount ?? 120;
+
+  const liveStatus = doctor.liveStatus;
+  const isLive = liveStatus?.isLive ?? false;
+  const isAvailable = liveStatus
+    ? liveStatus.isAvailable
+    : doctor.isAvailable;
+
+  const avatarSrc =
     (doctor as any).profilePhoto ||
     doctor.user?.avatar ||
     null;
 
-  const location =
+  const rawName = doctor.user?.name || "Doctor";
+
+  const displayFullname = rawName.toLowerCase().startsWith("dr")
+    ? rawName
+    : `Dr. ${rawName}`;
+
+  const specialization =
+    doctor.specialization || "General Physician";
+
+  const clinicCity =
     doctor.clinic?.city ||
-    doctor.clinic?.clinicName ||
+    parseEnglishName(doctor.clinic?.clinicName) ||
     null;
 
+  const qualification = doctor.qualification || "MBBS";
+
+  const rawMedicalSystem = String(
+    (doctor as any).medicalSystem || "ALLOPATHY"
+  ).toUpperCase();
+
+  const medicalSystem =
+    rawMedicalSystem.charAt(0) +
+    rawMedicalSystem.slice(1).toLowerCase();
+
+  const hasClinic =
+    !!doctor.clinic ||
+    (Array.isArray(doctor.allClinics) &&
+      doctor.allClinics.length > 0);
+
   return (
-    <article
+    <div
       className="
-        group
-        relative
-        h-full
+        group relative
+        h-[340px]
+        shrink-0 snap-start
         overflow-hidden
         rounded-[22px]
+        p-[2px]
         bg-gradient-to-br
-        from-[#252A67]
-        via-[#3B4A8F]
+        from-[#252a67]
+        via-[#3b4a8f]
         to-[#14B8A6]
-        p-[3px]
-        shadow-[0_8px_24px_rgba(37,42,103,0.09)]
-        transition-all
-        duration-300
-        hover:-translate-y-1
-        hover:shadow-[0_18px_38px_rgba(20,184,166,0.16)]
+        shadow-[0_6px_20px_rgba(37,42,103,0.15)]
+        transition-all duration-300
+        hover:-translate-y-1.5
+        hover:shadow-[0_15px_35px_rgba(20,184,166,0.30)]
+        w-[240px]
+        sm:w-[260px]
+        md:w-[280px]
+        lg:w-[300px]
+        xl:w-[320px]
       "
     >
+      {/* VIP Glow */}
+
       <div
         className="
-          relative
-          flex
-          h-full
-          min-w-0
-          flex-col
-          overflow-hidden
-          rounded-[19px]
+          absolute -inset-1 -z-10
+          rounded-[24px]
+          bg-gradient-to-br
+          from-[#252a67]
+          via-[#3b4a8f]
+          to-[#14B8A6]
+          opacity-0 blur-lg
+          transition-opacity duration-500
+          group-hover:opacity-50
+        "
+      />
+
+      {/* Inner Card */}
+
+      <div
+        className="
+          relative flex h-full flex-col
+          rounded-[20px]
           bg-white
+          px-4 pb-4 pt-5
+          sm:px-5
           dark:bg-slate-900
         "
       >
-        {/* Favorite */}
+        {/* Favorite Button */}
 
         <button
           type="button"
+          aria-label="Add to favorites"
           onClick={(e) => {
             e.preventDefault();
-            setIsFavorite((prev) => !prev);
+            setIsFavorite((value) => !value);
           }}
-          aria-label={
-            isFavorite
-              ? "Remove from favorites"
-              : "Save to favorites"
-          }
           className="
-            absolute
-            right-3
-            top-3
-            z-30
-            flex
-            h-8
-            w-8
-            items-center
-            justify-center
-            rounded-full
-            border
-            border-white/80
-            bg-white/90
-            text-slate-400
-            shadow-[0_4px_12px_rgba(0,0,0,0.11)]
-            backdrop-blur-md
-            transition-all
-            hover:scale-105
+            absolute right-3 top-4 z-20
+            text-slate-300
+            transition-colors
             hover:text-red-500
-            dark:border-slate-700
-            dark:bg-slate-800/90
+            dark:text-slate-600
+            dark:hover:text-red-500
           "
         >
           <Heart
             className={`
-              h-[15px]
-              w-[15px]
-              transition-all
+              h-[18px] w-[18px] transition-transform
               ${
                 isFavorite
-                  ? "scale-110 fill-red-500 text-red-500"
+                  ? "fill-red-500 text-red-500 scale-110"
                   : ""
               }
             `}
           />
         </button>
 
-        {/* Doctor Image */}
+        {/* TOP SECTION */}
+
+        <div className="flex items-start gap-3.5">
+
+          {/* Doctor Image */}
+
+          <div className="relative h-[85px] w-[85px] shrink-0">
+
+            <div
+              className="
+                h-full w-full overflow-hidden
+                rounded-[16px]
+                border border-slate-100
+                bg-slate-50
+                dark:border-slate-800
+                dark:bg-slate-800/50
+              "
+            >
+              {avatarSrc ? (
+                <img
+                  src={avatarSrc}
+                  alt={rawName}
+                  loading="lazy"
+                  className="
+                    h-full w-full object-cover object-top
+                    transition-transform duration-500
+                    group-hover:scale-[1.05]
+                  "
+                  onError={(event) => {
+                    const image = event.currentTarget;
+                    image.style.display = "none";
+
+                    const parent = image.parentElement;
+
+                    if (parent) {
+                      parent.innerHTML = `
+                        <div class="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#252a67] to-[#14B8A6] text-2xl font-bold text-white">
+                          ${initials(rawName)}
+                        </div>
+                      `;
+                    }
+                  }}
+                />
+              ) : (
+                <div
+                  className="
+                    flex h-full w-full items-center justify-center
+                    bg-gradient-to-br
+                    from-[#252a67] to-[#14B8A6]
+                    text-2xl font-bold text-white
+                  "
+                >
+                  {initials(rawName)}
+                </div>
+              )}
+            </div>
+
+            {/* Verified Badge */}
+
+            <div
+              className="
+                absolute -bottom-1 -right-1
+                flex h-6 w-6 items-center justify-center
+                rounded-full border-2
+                border-white bg-[#14B8A6]
+                shadow-sm dark:border-slate-900
+              "
+            >
+              <BadgeCheck className="h-3 w-3 text-white" />
+            </div>
+          </div>
+
+          {/* Doctor Details */}
+
+          <div className="min-w-0 flex-1 pt-1 pr-6">
+
+            <div className="mb-0.5 w-full overflow-hidden">
+              <MarqueeText
+                text={displayFullname}
+                minChars={14}
+                className="
+                  text-[16px] font-extrabold
+                  tracking-tight text-slate-900
+                  dark:text-white
+                "
+              />
+            </div>
+
+            <p
+              className="
+                truncate text-[12px]
+                font-semibold text-teal-600
+                dark:text-teal-400
+              "
+            >
+              {specialization}
+            </p>
+
+            <p
+              className="
+                mt-1 truncate text-[11px]
+                font-medium text-slate-500
+                dark:text-slate-400
+              "
+            >
+              {qualification}
+              <span className="mx-0.5 text-slate-300">•</span>
+              {medicalSystem}
+            </p>
+          </div>
+        </div>
+
+        {/* STATS ROW */}
 
         <div
           className="
-            relative
-            h-[174px]
-            overflow-hidden
-            bg-slate-100
-
-            sm:h-[190px]
-
-            md:h-[184px]
-
-            lg:h-[172px]
-
-            xl:h-[180px]
-
-            2xl:h-[185px]
-
-            dark:bg-slate-800
+            mt-4 flex min-h-[27px]
+            items-center gap-3
+            text-[11px] font-semibold
+            text-slate-600 dark:text-slate-300
           "
         >
-          {avatar ? (
-            <img
-              src={avatar}
-              alt={name}
-              loading="lazy"
-              className="
-                h-full
-                w-full
-                object-cover
-                object-top
-                transition-transform
-                duration-700
-                ease-out
-                group-hover:scale-[1.04]
-              "
-            />
-          ) : (
+          <div
+            className="
+              flex items-center gap-1
+              rounded-md border border-slate-100
+              bg-slate-50 px-2 py-1
+              dark:border-slate-800
+              dark:bg-slate-800/50
+            "
+          >
+            <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+
+            <span>
+              {rating}
+              <span className="font-normal text-slate-400">
+                {" "}({reviews})
+              </span>
+            </span>
+          </div>
+
+          {experienceYears > 0 && (
             <div
               className="
-                flex
-                h-full
-                w-full
-                items-center
-                justify-center
-                bg-gradient-to-br
-                from-[#252A67]
-                via-[#3B4A8F]
-                to-[#14B8A6]
-                text-4xl
-                font-bold
-                text-white
+                flex items-center gap-1
+                rounded-md border border-slate-100
+                bg-slate-50 px-2 py-1
+                dark:border-slate-800
+                dark:bg-slate-800/50
               "
             >
-              {initials(name)}
+              <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+              <span>{experienceYears}+ Yrs</span>
             </div>
           )}
+        </div>
+
+        {/* DIVIDER */}
+
+        <div
+          className="
+            my-3 h-px w-full shrink-0
+            bg-slate-100 dark:bg-slate-800
+          "
+        />
+
+        {/* CLINIC INFO */}
+
+        <div className="mb-4 min-h-[53px]">
+
+          <div className="mb-1.5 flex items-center gap-1.5 text-slate-400">
+            <MapPin className="h-3.5 w-3.5" />
+
+            <span
+              className="
+                text-[10px] font-bold
+                uppercase tracking-wider
+              "
+            >
+              Primary Location
+            </span>
+          </div>
+
+          {hasClinic && clinicCity ? (
+            <div className="flex items-center gap-2 pl-5">
+              <div className="min-w-0 flex-1 overflow-hidden">
+                <MarqueeText
+                  text={clinicCity}
+                  minChars={25}
+                  className="
+                    text-[13px] font-bold
+                    text-slate-700 dark:text-slate-200
+                  "
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="pl-5 text-[11px] font-medium text-slate-400">
+              {t.has("noClinic")
+                ? t("noClinic")
+                : "Location unavailable"}
+            </div>
+          )}
+        </div>
+
+        {/* STATUS & BUTTONS */}
+
+        <div className="mt-auto flex flex-col gap-3">
+
+          {/* FIXED STATUS HEIGHT */}
 
           <div
             className="
-              pointer-events-none
-              absolute
-              inset-x-0
-              bottom-0
-              h-24
-              bg-gradient-to-t
-              from-black/35
-              via-black/5
-              to-transparent
-            "
-          />
-
-          {/* Verified */}
-
-          <div className="absolute left-3 top-3">
-            <span
-              className="
-                inline-flex
-                items-center
-                gap-1.5
-                rounded-full
-                bg-gradient-to-r
-                from-emerald-500
-                to-teal-500
-                px-2.5
-                py-1.5
-                text-[8px]
-                font-extrabold
-                tracking-[0.08em]
-                text-white
-                shadow-lg
-                shadow-emerald-500/20
-                backdrop-blur-md
-              "
-            >
-              <BadgeCheck className="h-3 w-3" />
-              VERIFIED
-            </span>
-          </div>
-
-          {/* Experience */}
-
-          {experience > 0 && (
-            <div className="absolute bottom-3 left-3">
-              <span
-                className="
-                  inline-flex
-                  items-center
-                  gap-1.5
-                  rounded-full
-                  border
-                  border-white/20
-                  bg-slate-950/65
-                  px-2.5
-                  py-1.5
-                  text-[8px]
-                  font-bold
-                  text-white
-                  shadow-sm
-                  backdrop-blur-md
-                "
-              >
-                <BriefcaseBusiness
-                  className="
-                    h-3
-                    w-3
-                    text-teal-300
-                  "
-                />
-
-                {experience}+ Years
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Content */}
-
-        <div
-          className="
-            flex
-            flex-1
-            flex-col
-            px-3.5
-            pb-3.5
-            pt-3.5
-
-            lg:px-4
-            lg:pb-4
-            lg:pt-3.5
-          "
-        >
-          <h3
-            className="
-              truncate
-              text-[16px]
-              font-extrabold
-              leading-5
-              tracking-[-0.02em]
-              text-[#182153]
-              dark:text-white
+              flex h-[28px] shrink-0
+              items-center justify-start
             "
           >
-            {name}
-          </h3>
-
-          <p
-            className="
-              mt-1
-              truncate
-              text-[12px]
-              font-semibold
-              leading-5
-              text-[#3B4A8F]
-              dark:text-indigo-300
-            "
-          >
-            {specialization}
-          </p>
-
-          {/* Rating */}
-
-          {rating != null && (
-            <div className="mt-2.5">
+            {isLive ? (
               <div
                 className="
-                  inline-flex
-                  items-center
-                  gap-1.5
-                  rounded-lg
-                  bg-amber-50
-                  px-2
-                  py-1.5
-                  dark:bg-amber-500/10
+                  inline-flex items-center gap-1.5
+                  rounded-md border border-red-100
+                  bg-red-50 px-2 py-1
+                  text-[10px] font-bold text-red-600
+                  dark:border-red-900/30
+                  dark:bg-red-950/20
+                  dark:text-red-400
                 "
               >
-                <Star
-                  className="
-                    h-3.5
-                    w-3.5
-                    fill-amber-400
-                    text-amber-400
-                  "
-                />
-
-                <span
-                  className="
-                    text-[11px]
-                    font-bold
-                    text-amber-700
-                    dark:text-amber-400
-                  "
-                >
-                  {rating}
-                </span>
-
-                {reviews != null && (
-                  <span
-                    className="
-                      text-[10px]
-                      font-medium
-                      text-amber-600/70
-                      dark:text-amber-400/70
-                    "
-                  >
-                    ({reviews})
-                  </span>
-                )}
+                <Radio className="h-3 w-3 animate-pulse" />
+                {t("liveNow") || "Live Now"}
               </div>
-            </div>
-          )}
-
-          {/* Location */}
-
-          {location && (
-            <div
-              className="
-                mt-2.5
-                flex
-                min-w-0
-                items-center
-                gap-1.5
-              "
-            >
+            ) : isAvailable ? (
               <div
                 className="
-                  flex
-                  h-6
-                  w-6
-                  shrink-0
-                  items-center
-                  justify-center
-                  rounded-md
-                  bg-slate-100
-                  dark:bg-slate-800
+                  inline-flex items-center gap-1.5
+                  rounded-md border border-emerald-100
+                  bg-emerald-50 px-2 py-1
+                  text-[10px] font-bold text-emerald-600
+                  dark:border-emerald-900/30
+                  dark:bg-emerald-950/20
+                  dark:text-emerald-400
                 "
               >
-                <MapPin
-                  className="
-                    h-3
-                    w-3
-                    text-[#3B4A8F]
-                  "
-                />
+                <Check className="h-3 w-3" />
+                {t("availableNow") || "Available Today"}
               </div>
-
-              <span
-                className="
-                  truncate
-                  text-[10px]
-                  font-medium
-                  text-slate-500
-                  dark:text-slate-400
-                "
-              >
-                {location}
-              </span>
-            </div>
-          )}
-
-          {/* Available */}
-
-          <div className="mt-2.5">
-            <span
-              className="
-                inline-flex
-                items-center
-                gap-1.5
-                rounded-full
-                border
-                border-emerald-100
-                bg-emerald-50
-                px-2.5
-                py-1.5
-                text-[9px]
-                font-bold
-                text-emerald-700
-                dark:border-emerald-500/20
-                dark:bg-emerald-500/10
-                dark:text-emerald-400
-              "
-            >
-              <span
-                className="
-                  h-1.5
-                  w-1.5
-                  animate-pulse
-                  rounded-full
-                  bg-emerald-500
-                "
-              />
-
-              Available Today
-            </span>
+            ) : null}
           </div>
 
-          {/* Button */}
+          {/* ACTION BUTTONS */}
 
-          <div className="mt-auto pt-3.5">
+          <div className="grid grid-cols-2 gap-2">
+
             <Link
               href={`/doctors/${doctor.id}`}
               className="
-                group/btn
-                flex
-                w-full
-                items-center
-                justify-center
-                gap-2
-                rounded-xl
-                bg-gradient-to-r
-                from-[#252A67]
-                via-[#3B4A8F]
-                to-[#3B4A8F]
-                py-2.5
-                text-[12px]
-                font-bold
-                text-white
-                shadow-md
-                shadow-[#252A67]/15
-                transition-all
-                duration-300
-                hover:from-[#252A67]
-                hover:via-[#3B4A8F]
-                hover:to-[#14B8A6]
-                hover:shadow-lg
-                hover:shadow-[#14B8A6]/20
-                active:scale-[0.98]
+                flex h-10 items-center justify-center
+                rounded-[10px]
+                border border-slate-200
+                bg-white px-3
+                text-[12px] font-bold text-slate-600
+                transition-colors
+                hover:bg-slate-50 hover:text-slate-900
+                dark:border-slate-700
+                dark:bg-slate-800
+                dark:text-slate-300
+                dark:hover:bg-slate-700
               "
             >
-              Book Appointment
-
-              <ArrowRight
-                className="
-                  h-3.5
-                  w-3.5
-                  transition-transform
-                  duration-300
-                  group-hover/btn:translate-x-1
-                "
-              />
+              View Profile
             </Link>
+
+            <button
+              type="button"
+              onClick={handleBookClick}
+              className="
+                flex h-10 items-center justify-center
+                gap-1.5 rounded-[10px]
+                bg-gradient-to-r
+                from-[#252a67] to-[#14B8A6]
+                px-3 text-[12px] font-bold text-white
+                shadow-sm transition-all
+                hover:shadow-md active:scale-95
+              "
+            >
+              <CalendarCheck className="h-3.5 w-3.5" />
+              Book Now
+            </button>
           </div>
         </div>
       </div>
-    </article>
+    </div>
   );
 }
+
+/* =========================================================
+   MAIN COMPONENT
+========================================================= */
 
 export default function FeaturedDoctors() {
   const t = useTranslations("HomePage");
 
-  const {
-    data,
-    isLoading,
-  } = usePublicFeaturedDoctors();
+  const { data, isLoading } = usePublicFeaturedDoctors();
 
-  const featured =
-    ((data as ExtendedDoctor[]) ?? []).filter(
-      (doctor) => doctor?.id
-    );
+  const featured = ((data as ExtendedDoctor[]) ?? []).filter(
+    (doctor) => doctor?.id
+  );
 
-  const carouselRef =
-    useRef<HTMLDivElement>(null);
+  const carouselRef = useRef<HTMLDivElement>(null);
 
-  const [isInteracting, setIsInteracting] =
-    useState(false);
+  const [isPaused, setIsPaused] = useState(false);
 
-  /* =========================================================
-     AUTO SLIDE — EVERY 3 SECONDS
-  ========================================================== */
+  /* GET CARD WIDTH */
 
-  useEffect(() => {
-    if (
-      isLoading ||
-      featured.length <= 1
-    ) {
-      return;
-    }
+  const getScrollAmount = () => {
+    const width = window.innerWidth;
 
-    const container =
-      carouselRef.current;
+    if (width < 640) return 256;
+    if (width < 768) return 276;
+    if (width < 1024) return 296;
+    if (width < 1280) return 316;
+
+    return 336;
+  };
+
+  /* MANUAL SCROLL */
+
+  const scroll = (direction: "left" | "right") => {
+    const container = carouselRef.current;
 
     if (!container) return;
 
+    const amount = getScrollAmount();
+
+    container.scrollBy({
+      left: direction === "right" ? amount : -amount,
+      behavior: "smooth",
+    });
+  };
+
+  /* AUTO SCROLL */
+
+  useEffect(() => {
+    if (isLoading || featured.length <= 2) return;
+
     const interval = window.setInterval(() => {
-      if (isInteracting) return;
+      if (isPaused) return;
 
-      const cards =
-        container.querySelectorAll<HTMLElement>(
-          "[data-doctor-card]"
-        );
+      const container = carouselRef.current;
 
-      if (!cards.length) return;
+      if (!container) return;
 
-      const currentScroll =
-        container.scrollLeft;
+      const maxScroll =
+        container.scrollWidth - container.clientWidth;
 
-      let nextCard: HTMLElement | null = null;
-
-      for (const card of cards) {
-        if (
-          card.offsetLeft >
-          currentScroll + 10
-        ) {
-          nextCard = card;
-          break;
-        }
-      }
-
-      if (!nextCard) {
+      if (container.scrollLeft >= maxScroll - 10) {
         container.scrollTo({
           left: 0,
           behavior: "smooth",
@@ -577,207 +599,207 @@ export default function FeaturedDoctors() {
         return;
       }
 
-      container.scrollTo({
-        left: nextCard.offsetLeft,
+      container.scrollBy({
+        left: getScrollAmount(),
         behavior: "smooth",
       });
     }, 3000);
 
-    return () => {
-      window.clearInterval(interval);
-    };
-  }, [
-    featured.length,
-    isLoading,
-    isInteracting,
-  ]);
+    return () => window.clearInterval(interval);
+  }, [isLoading, featured.length, isPaused]);
 
-  /* =========================================================
-     LOADING
-  ========================================================== */
-
-  if (isLoading) {
-    return (
-      <section
-        className="
-          mx-auto
-          max-w-7xl
-          border-b
-          border-slate-100
-          px-5
-          py-6
-          lg:px-8
-          dark:border-slate-800
-        "
-      >
-        <SectionHeader
-          title={
-            t("featuredDoctors") ||
-            "Featured Doctors"
-          }
-          subtitle="Top rated and most trusted doctors near you"
-        />
-
-        <div
-          className="
-            -mx-1
-            flex
-            gap-4
-            overflow-hidden
-            px-1
-          "
-        >
-          {[1, 2, 3, 4].map((i) => (
-            <div
-              key={i}
-              className="
-                h-[430px]
-                shrink-0
-                basis-[82%]
-                animate-pulse
-                rounded-[22px]
-                bg-slate-100
-
-                sm:basis-[48%]
-
-                md:basis-[31%]
-
-                lg:basis-[calc((100%-48px)/4)]
-
-                dark:bg-slate-800
-              "
-            />
-          ))}
-        </div>
-      </section>
-    );
-  }
-
-  if (featured.length === 0) {
+  if (!isLoading && featured.length === 0) {
     return null;
   }
 
   return (
     <section
       className="
-        mx-auto
-        max-w-7xl
-        border-b
-        border-slate-100
-        px-5
-        py-6
+        mx-auto max-w-7xl
+        border-b border-slate-100
+        px-5 py-6
         lg:px-8
-        dark:border-slate-800
+        dark:border-soft-200
       "
     >
-      {/* HEADER */}
+      {/* MARQUEE ANIMATION */}
 
-      <SectionHeader
-        title={
-          t("featuredDoctors") ||
-          "Featured Doctors"
-        }
-        subtitle="Top rated and most trusted doctors near you"
-        viewAllHref="/doctors/featured"
-        viewAllLabel={
-          t("viewAll") || "View All"
-        }
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+            @keyframes marqueeScroll {
+              0% { transform: translateX(0%); }
+              100% { transform: translateX(-50%); }
+            }
+          `,
+        }}
       />
 
-      {/* =====================================================
-          RESPONSIVE CAROUSEL
-      ====================================================== */}
+      {/* HEADER */}
 
-      <div
-        ref={carouselRef}
-        onMouseEnter={() =>
-          setIsInteracting(true)
-        }
-        onMouseLeave={() =>
-          setIsInteracting(false)
-        }
-        onTouchStart={() =>
-          setIsInteracting(true)
-        }
-        onTouchEnd={() => {
-          window.setTimeout(() => {
-            setIsInteracting(false);
-          }, 1200);
-        }}
-        className="
-          -mx-1
-          flex
-          gap-4
-          overflow-x-auto
-          overflow-y-hidden
-          px-1
-          pb-3
-          snap-x
-          snap-mandatory
-          scroll-smooth
-          overscroll-x-contain
-          [scrollbar-width:none]
-          [-ms-overflow-style:none]
-          [&::-webkit-scrollbar]:hidden
-        "
-      >
-        {featured.map((doctor) => (
-          <div
-            key={doctor.id}
-            data-doctor-card
+      <div className="mb-4 flex items-center justify-between">
+
+        <div>
+          <h2
             className="
-              shrink-0
-              snap-start
-
-              /* MOBILE — keep the good 1.2 card view */
-              basis-[82%]
-
-              /* TABLET */
-              sm:basis-[48%]
-
-              /* DESKTOP — wide professional cards */
-              md:basis-[34%]
-
-              /* LARGE DESKTOP */
-              lg:basis-[calc((100%-48px)/4)]
-
-              /* VERY LARGE */
-              xl:basis-[calc((100%-64px)/5)]
-
-              /* ULTRA WIDE — prevents cards becoming too narrow */
-              2xl:basis-[calc((100%-64px)/5)]
+              text-2xl font-extrabold
+              tracking-tight text-slate-900
+              dark:text-white
             "
           >
-            <FeaturedDoctorCard
-              doctor={doctor}
-            />
-          </div>
-        ))}
-      </div>
+            {t("featuredDoctors") || "Featured Doctors"}
+          </h2>
 
-      {/* Mobile hint */}
+          <p
+            className="
+              mt-1 text-sm font-medium
+              text-slate-500 dark:text-slate-400
+            "
+          >
+            Top rated and most trusted doctors near you
+          </p>
+        </div>
 
-      {featured.length > 1 && (
-        <div
+        <Link
+          href="/doctors/featured"
           className="
-            mt-1
-            flex
-            items-center
-            justify-center
-            gap-1.5
-            text-[10px]
-            font-medium
-            text-slate-400
-            sm:hidden
+            hidden text-sm font-bold
+            text-[#14B8A6]
+            hover:text-[#0f8a7c]
+            sm:block
           "
         >
-          <span>
-            Swipe to explore more doctors
-          </span>
+          {t("viewAll") || "View All"}
+          <ArrowRight className="ml-1 inline-block h-4 w-4" />
+        </Link>
+      </div>
 
-          <ArrowRight className="h-3 w-3" />
-        </div>
-      )}
+      {/* CAROUSEL */}
+
+      <div
+        className="relative mt-5"
+        onMouseEnter={() => setIsPaused(true)}
+        onMouseLeave={() => setIsPaused(false)}
+        onTouchStart={() => setIsPaused(true)}
+        onTouchEnd={() => setIsPaused(false)}
+      >
+
+        {/* LEFT BUTTON */}
+
+        <button
+          type="button"
+          onClick={() => scroll("left")}
+          aria-label="Previous doctors"
+          className="
+            absolute -left-4 top-1/2 z-30
+            hidden h-10 w-10
+            -translate-y-1/2
+            items-center justify-center
+            rounded-full border border-slate-200
+            bg-white text-slate-600
+            shadow-[0_5px_16px_rgba(15,23,42,0.1)]
+            transition-all duration-200
+            hover:scale-105
+            hover:border-[#14B8A6]
+            hover:text-[#14B8A6]
+            active:scale-95
+            md:flex
+            dark:border-slate-700
+            dark:bg-slate-800
+            dark:text-slate-300
+          "
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+
+        {/* RIGHT BUTTON */}
+
+        <button
+          type="button"
+          onClick={() => scroll("right")}
+          aria-label="Next doctors"
+          className="
+            absolute -right-4 top-1/2 z-30
+            hidden h-10 w-10
+            -translate-y-1/2
+            items-center justify-center
+            rounded-full border border-slate-200
+            bg-white text-slate-600
+            shadow-[0_5px_16px_rgba(15,23,42,0.1)]
+            transition-all duration-200
+            hover:scale-105
+            hover:border-[#14B8A6]
+            hover:text-[#14B8A6]
+            active:scale-95
+            md:flex
+            dark:border-slate-700
+            dark:bg-slate-800
+            dark:text-slate-300
+          "
+        >
+          <ChevronRight className="h-5 w-5" />
+        </button>
+
+        {/* LOADING */}
+
+        {isLoading ? (
+          <div className="flex gap-4 overflow-hidden px-1 py-2">
+            {[1, 2, 3, 4].map((item) => (
+              <div
+                key={item}
+                className="
+                  h-[340px] shrink-0 animate-pulse
+                  rounded-[22px] bg-slate-100
+                  w-[240px]
+                  sm:w-[260px]
+                  md:w-[280px]
+                  lg:w-[300px]
+                  xl:w-[320px]
+                  dark:bg-slate-800
+                "
+              />
+            ))}
+          </div>
+        ) : (
+          <div
+            ref={carouselRef}
+            className="
+              flex gap-4
+              overflow-x-auto overflow-y-hidden
+              px-1 py-3
+              no-scrollbar
+              scroll-smooth
+              snap-x snap-mandatory
+              touch-pan-x
+              overscroll-x-contain
+              [-webkit-overflow-scrolling:touch]
+            "
+          >
+            {featured.map((doctor) => (
+              <FeaturedDoctorCard
+                key={doctor.id}
+                doctor={doctor}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* MOBILE VIEW ALL */}
+
+      <div className="mt-4 text-center sm:hidden">
+        <Link
+          href="/doctors/featured"
+          className="
+            text-sm font-bold
+            text-[#14B8A6]
+            hover:text-[#0f8a7c]
+          "
+        >
+          {t("viewAll") || "View All"}
+          <ArrowRight className="ml-1 inline-block h-4 w-4" />
+        </Link>
+      </div>
     </section>
   );
 }
