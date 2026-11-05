@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import type { AuthUser } from "@doctor-contract/shared";
-import { api, setAccessToken } from "./api";
+import { api, setAccessToken, refreshSession } from "./api";
 
 type AuthContextValue = {
   user: AuthUser | null;
@@ -19,34 +19,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const loadUser = useCallback(async () => {
-    try {
-      // 🟢 Update: লোকাল স্টোরেজ থেকে রিফ্রেশ টোকেন নেওয়া
-      const localRefreshToken = typeof window !== "undefined" ? localStorage.getItem("refreshToken") : null;
-
-      const refreshRes = await api.post("/auth/refresh", {
-          refreshToken: localRefreshToken // বডিতে পাঠানো হচ্ছে
-      });
-      
-      const token = refreshRes.data?.data?.accessToken;
-      const newRefreshToken = refreshRes.data?.data?.refreshToken;
-      
-      if (token) {
-         setAccessToken(token);
-         if (newRefreshToken && typeof window !== "undefined") {
-             localStorage.setItem("refreshToken", newRefreshToken);
-         }
-         
-         const meRes = await api.get("/auth/me");
-         setUserState(meRes.data?.data?.user);
-      } else {
-         throw new Error("No token received");
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const token = await refreshSession(); // shared: never runs twice in parallel
+        if (!token) throw new Error("No token received");
+        const meRes = await api.get("/auth/me");
+        setUserState(meRes.data?.data?.user);
+        setLoading(false);
+        return;
+      } catch (err: any) {
+        const status = err?.response?.status;
+        if (status === 401 || status === 403) {
+          if (typeof window !== "undefined") localStorage.removeItem("refreshToken");
+          break;
+        }
+        // network error / backend waking up -> keep token, wait and retry
+        if (attempt < 2) await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
       }
-    } catch (err) {
-      setAccessToken(null);
-      setUserState(null);
-    } finally {
-      setLoading(false);
     }
+    setAccessToken(null);
+    setUserState(null);
+    setLoading(false);
   }, []);
 
   useEffect(() => {

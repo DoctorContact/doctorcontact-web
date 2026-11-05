@@ -11,6 +11,27 @@ export function setAccessToken(token: string | null) {
   accessToken = token;
 }
 
+// ONE shared refresh for the whole app (stops parallel refresh calls from killing each other's token)
+let refreshPromise: Promise<string | null> | null = null;
+
+export function refreshSession(): Promise<string | null> {
+  if (refreshPromise) return refreshPromise;
+  refreshPromise = (async () => {
+    const localRefreshToken = typeof window !== "undefined" ? localStorage.getItem("refreshToken") : null;
+    const res = await axios.post(
+      `${process.env.NEXT_PUBLIC_API_URL}/auth/refresh`,
+      { refreshToken: localRefreshToken },
+      { withCredentials: true }
+    );
+    const newAccess = res.data?.data?.accessToken ?? null;
+    const newRefresh = res.data?.data?.refreshToken;
+    if (newAccess) setAccessToken(newAccess);
+    if (newRefresh && typeof window !== "undefined") localStorage.setItem("refreshToken", newRefresh);
+    return newAccess;
+  })().finally(() => { refreshPromise = null; });
+  return refreshPromise;
+}
+
 // Request Interceptor
 api.interceptors.request.use((config) => {
   if (accessToken) {
@@ -35,29 +56,17 @@ api.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        // 🟢 Update: লোকাল স্টোরেজ থেকে রিফ্রেশ টোকেন নিয়ে বডিতে পাঠানো
-        const localRefreshToken = typeof window !== "undefined" ? localStorage.getItem("refreshToken") : null;
-        
-        const res = await axios.post(
-          `${process.env.NEXT_PUBLIC_API_URL}/auth/refresh`,
-          { refreshToken: localRefreshToken }, // বডিতে পাঠানো হচ্ছে
-          { withCredentials: true }
-        );
-
-        const newAccessToken = res.data?.data?.accessToken;
-        const newRefreshToken = res.data?.data?.refreshToken; // ব্যাকএন্ড থেকে নতুন রিফ্রেশ টোকেন আসলে
-        
+        const newAccessToken = await refreshSession();
         if (newAccessToken) {
-          setAccessToken(newAccessToken);
-          if (newRefreshToken && typeof window !== "undefined") {
-             localStorage.setItem("refreshToken", newRefreshToken); // লোকাল স্টোরেজ আপডেট
-          }
-          
           originalRequest.headers.Authorization = "Bearer " + newAccessToken;
-          return api(originalRequest); 
+          return api(originalRequest);
         }
-      } catch (refreshError) {
-        return handleLogoutAndRedirect(refreshError);
+      } catch (refreshError: any) {
+        const st = refreshError?.response?.status;
+        // Logout ONLY when the server says the session is really invalid.
+        // Network error / server sleeping (502/503/timeout) must NOT log the user out.
+        if (st === 401 || st === 403) return handleLogoutAndRedirect(refreshError);
+        return Promise.reject(refreshError);
       }
     }
 
