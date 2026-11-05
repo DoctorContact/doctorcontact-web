@@ -8,5 +8,8 @@
   "workspaces": [
     "apps/*",
     "packages/*"
-  ]
+  ],
+  "dependencies": {
+    "firebase": "^13.1.0"
+  }
 }
