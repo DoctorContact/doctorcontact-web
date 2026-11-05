@@ -378,6 +378,8 @@ function DoctorRow({ doctor, clinicId, specializations, locale, refetch }: { doc
 
   const initialOnlineStatus = (doctor as any).onlineBookingEnabled ?? true;
   const [isOnlineEnabled, setIsOnlineEnabled] = useState(initialOnlineStatus);
+  // SYNC online toggle with fresh server data after refetch
+  useEffect(() => { setIsOnlineEnabled((doctor as any).onlineBookingEnabled ?? true); }, [(doctor as any).onlineBookingEnabled]);
   const [isToggling, setIsToggling] = useState(false);
 
   const [form, setForm] = useState({
@@ -427,7 +429,7 @@ function DoctorRow({ doctor, clinicId, specializations, locale, refetch }: { doc
       toast.success(newStatus ? "Online Booking Enabled" : "Online Booking Disabled");
       refetch();
     } catch (error) {
-      toast.error("Failed to update booking status");
+      toast.error((error as any)?.response?.data?.message || "Failed to update booking status");
     } finally {
       setIsToggling(false);
     }
