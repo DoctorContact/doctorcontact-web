@@ -84,16 +84,7 @@ export default function CenterTestsPage() {
    * Tests which are available globally but have
    * not yet been added to this diagnostic center.
    */
-  const availableGlobalTests = useMemo(() => {
-    const addedIds = new Set(
-      centerTests.map((test) => test.testId),
-    );
-
-    return globalTests.filter(
-      (test: DiagnosticTest) =>
-        !addedIds.has(test.id),
-    );
-  }, [globalTests, centerTests]);
+ const availableGlobalTests = globalTests;
 
   /*
    * Search center tests safely.
@@ -340,8 +331,9 @@ export default function CenterTestsPage() {
           <button
             type="button"
             onClick={openAddModal}
+            // 🟢 NEW: শুধু তখনই ডিসেবল হবে যদি অ্যাডমিন কোনো গ্লোবাল টেস্ট না বানিয়ে থাকে
             disabled={
-              availableGlobalTests.length === 0
+              globalTests.length === 0
             }
             className="
               inline-flex
