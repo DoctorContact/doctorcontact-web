@@ -87,7 +87,7 @@ function ClinicCard({ clinic }: { clinic: PublicClinic }) {
         "
       >
         {image && !broken ? (
-          <img
+          <img loading="lazy" decoding="async"
             src={image}
             alt={name}
             onError={() => setBroken(true)}

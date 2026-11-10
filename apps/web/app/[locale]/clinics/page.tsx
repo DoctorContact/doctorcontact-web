@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 
 import { Link } from "@/i18n/routing";
+import { Pill } from "lucide-react";
 import { useLocationCity } from "@/lib/hooks/useLocationCity";
 import { fetchSearchLocations } from "@/lib/api";
 import {
@@ -191,6 +192,8 @@ export default function ClinicsPage() {
       return matchesCity && matchesQuery;
     });
   }, [clinics, query, city]);
+
+  const pharmacyClinics = filteredClinics.filter((clinic) => clinic.onlinePharmacyEnabled);
 
   return (
     <main className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-7 lg:px-8">
@@ -490,6 +493,60 @@ export default function ClinicsPage() {
           </div>
         )}
       </div>
+
+      {!isLoading && pharmacyClinics.length > 0 && (
+        <section className="mt-10">
+          <div className="mb-4 flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#0F766E] to-[#14B8A6] text-white shadow-sm">
+              <Pill className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+                Online Pharmacy Delivery
+              </h2>
+              <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">
+                Clinics that provide medicines online
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {pharmacyClinics.map((clinic) => (
+              <Link
+                href={`/clinics/${clinic.id}`}
+                key={`pharmacy-${clinic.id}`}
+                className="group flex items-center gap-3 rounded-2xl border border-teal-100 bg-white p-3.5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-teal-900/40 dark:bg-slate-900"
+              >
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-[#252a67] to-[#14B8A6] text-sm font-extrabold text-white">
+                  {clinic.logo ? (
+                    <img
+                      src={clinic.logo}
+                      alt={clinic.clinicName || "Clinic"}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    initials(clinic.clinicName)
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="truncate text-sm font-extrabold text-slate-900 dark:text-white">
+                    {clinic.clinicName || "Clinic"}
+                  </h3>
+                  <p className="mt-0.5 flex items-center gap-1 truncate text-xs text-slate-500 dark:text-slate-400">
+                    <MapPin className="h-3 w-3 shrink-0 text-[#14B8A6]" />
+                    <span className="truncate">{clinic.city || clinic.address || "Location N/A"}</span>
+                  </p>
+                  <span className="mt-1.5 inline-flex items-center gap-1 rounded-md border border-teal-100 bg-teal-50 px-2 py-0.5 text-[10px] font-bold text-[#0F766E] dark:border-teal-800 dark:bg-teal-900/30 dark:text-teal-400">
+                    <Pill className="h-3 w-3" />
+                    Online Pharmacy
+                  </span>
+                </div>
+                <ArrowRight className="h-4 w-4 shrink-0 text-[#252a67] transition-transform group-hover:translate-x-1 group-hover:text-[#14B8A6] dark:text-blue-400" />
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
     </main>
   );
 }

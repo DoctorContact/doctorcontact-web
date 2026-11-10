@@ -50,7 +50,7 @@ function ClinicImage({
   return (
     <div className="relative h-[120px] w-full overflow-hidden bg-[#F1F5F9] sm:h-[145px] lg:h-[175px]">
       {showImage ? (
-        <img
+        <img loading="lazy" decoding="async"
           src={src as string}
           alt={name || "Clinic"}
           onError={() => setBroken(true)}

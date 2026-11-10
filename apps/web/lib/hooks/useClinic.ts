@@ -14,6 +14,7 @@ export type Clinic = {
   logo: string | null;
   isApproved: boolean;
   onlineConsultationEnabled: boolean;
+  onlinePharmacyEnabled?: boolean;
 };
 
 export type ClinicDoctor = {
@@ -288,6 +289,17 @@ export function useRespondToDoctorRequest() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["clinic", "doctors"] });
       qc.invalidateQueries({ queryKey: ["clinic", "requests"] });
+    },
+  });
+}
+export function useToggleOnlinePharmacy() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (enabled: boolean) =>
+      (await api.patch("/clinic/online-pharmacy", { enabled })).data.data.clinic,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["clinic", "profile"] });
+      qc.invalidateQueries({ queryKey: ["public", "clinics"] });
     },
   });
 }

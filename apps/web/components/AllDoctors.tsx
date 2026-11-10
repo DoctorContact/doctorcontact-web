@@ -131,7 +131,7 @@ function AllDoctorCard({ doctor }: { doctor: ExtendedDoctor }) {
         {/* ================= IMAGE ================= */}
         <div className="relative h-[135px] overflow-hidden bg-slate-50 sm:h-[140px] lg:h-[145px] dark:bg-slate-800">
           {avatar && !broken ? (
-            <img
+            <img loading="lazy" decoding="async"
               src={avatar}
               alt={rawName}
               onError={() => setBroken(true)}

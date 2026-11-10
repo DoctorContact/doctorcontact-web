@@ -23,6 +23,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "@/i18n/routing";
 import toast from "react-hot-toast";
+import { Pill } from "lucide-react";
 
 import {
   useClinicProfile,
@@ -30,6 +31,7 @@ import {
   useClinicDoctors,
   useClinicReceptionists,
   useToggleAutoFollowup,
+  useToggleOnlinePharmacy,
 } from "@/lib/hooks/useClinic";
 
 // ============================================================
@@ -710,6 +712,8 @@ export default function ClinicOverviewPage() {
 
       {clinic && <AutoFollowupToggle enabled={!!(clinic as any).autoFollowupEnabled} />}
 
+      {clinic && <OnlinePharmacyToggle enabled={!!clinic.onlinePharmacyEnabled} />}
+
       {/* ======================================================
           FOOT NOTE
           ====================================================== */}
@@ -773,7 +777,7 @@ function AutoFollowupToggle({ enabled }: { enabled: boolean }) {
           className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${on ? "bg-[#1C63E7]" : "bg-slate-300 dark:bg-slate-600"}`}
         >
           <span
-            className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${on ? "translate-x-5" : "translate-x-0.5"}`}
+            className={`absolute left-0 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${on ? "translate-x-5" : "translate-x-0.5"}`}
           />
         </button>
       </div>
@@ -829,5 +833,55 @@ function StatCard({
       <ChevronRight className="ml-auto h-4 w-4 shrink-0 text-slate-300 transition-transform group-hover:translate-x-0.5" />
 
     </div>
+  );
+}
+
+function OnlinePharmacyToggle({ enabled }: { enabled: boolean }) {
+  const toggle = useToggleOnlinePharmacy();
+  const [on, setOn] = useState(enabled);
+
+  async function flip() {
+    const next = !on;
+    setOn(next);
+    try {
+      await toggle.mutateAsync(next);
+      toast.success(
+        next
+          ? "Online pharmacy enabled - your clinic will show in the Online Pharmacy section."
+          : "Online pharmacy disabled.",
+      );
+    } catch {
+      setOn(!next);
+      toast.error("Could not update the setting.");
+    }
+  }
+
+  return (
+    <SettingsCard>
+      <div className="flex items-center gap-3 p-4 sm:p-5">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-[#0F766E]">
+          <Pill className="h-5 w-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <h3 className="text-xs font-bold text-slate-800 sm:text-sm dark:text-white">
+            Online Pharmacy
+          </h3>
+          <p className="mt-0.5 text-[10px] leading-relaxed text-slate-500 sm:text-xs dark:text-ink-500">
+            When ON, your clinic is listed in the Online Pharmacy section of the clinic directory.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={flip}
+          disabled={toggle.isPending}
+          aria-pressed={on}
+          className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${on ? "bg-[#0F766E]" : "bg-slate-300 dark:bg-slate-600"}`}
+        >
+          <span
+            className={`absolute left-0 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${on ? "translate-x-5" : "translate-x-0.5"}`}
+          />
+        </button>
+      </div>
+    </SettingsCard>
   );
 }
