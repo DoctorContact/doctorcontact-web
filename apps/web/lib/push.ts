@@ -75,7 +75,7 @@ let swPromise: Promise<ServiceWorkerRegistration> | null = null;
 function getPublicKey(): Promise<string | null> {
   if (!keyPromise) {
     keyPromise = api
-      .get("/notifications/web-push-key", { timeout: 10000 })
+      .get("/notifications/web-push-key", { timeout: 45000 })
       .then((res) => (res.data?.data?.publicKey as string | undefined) ?? null)
       .catch(() => null);
   }
@@ -125,7 +125,7 @@ export async function subscribeWebPush(): Promise<PushResult> {
   const publicKey = await getPublicKey();
   if (!publicKey) {
     keyPromise = null;
-    return fail("Server push key is missing (check VAPID keys in the backend .env and restart it)");
+    return fail("Could not get the push key from the server (it may be waking up, or VAPID keys are missing on the server)");
   }
 
   let registration: ServiceWorkerRegistration;
@@ -158,7 +158,7 @@ export async function subscribeWebPush(): Promise<PushResult> {
     await api.post(
       "/notifications/web-push/subscribe",
       { subscription: subscription.toJSON() },
-      { timeout: 15000 },
+      { timeout: 45000 },
     );
   } catch (err) {
     return fail("Server could not save the subscription", err);
@@ -190,6 +190,7 @@ export async function enablePushWithFeedback(hooks?: {
   });
 
   if (result.ok) {
+    resetPromptMemory();
     toast.success("Notifications enabled", { id: toastId });
   } else if (result.reason === "blocked") {
     hooks?.onBlocked?.();
@@ -218,4 +219,87 @@ export async function unsubscribeWebPush(): Promise<void> {
   } catch {
     // never block logout
   }
+}
+
+const DISMISSED_AT_KEY = "dc_push_dismissed_at";
+const DISMISS_COUNT_KEY = "dc_push_dismiss_count";
+const FIRST_GAP_MS = 5 * 60 * 1000;
+const NEXT_GAP_MS = 10 * 60 * 1000;
+
+function readNumber(key: string): number {
+  try {
+    return Number(localStorage.getItem(key) || 0) || 0;
+  } catch {
+    return 0;
+  }
+}
+
+export function isPromptDue(): boolean {
+  const dismissedAt = readNumber(DISMISSED_AT_KEY);
+  if (!dismissedAt) return true;
+  const gap = readNumber(DISMISS_COUNT_KEY) <= 1 ? FIRST_GAP_MS : NEXT_GAP_MS;
+  return Date.now() - dismissedAt >= gap;
+}
+
+export function markPromptDismissed(): void {
+  try {
+    localStorage.setItem(DISMISSED_AT_KEY, String(Date.now()));
+    localStorage.setItem(DISMISS_COUNT_KEY, String(readNumber(DISMISS_COUNT_KEY) + 1));
+  } catch {
+    // ignore
+  }
+}
+
+export function resetPromptMemory(): void {
+  try {
+    localStorage.removeItem(DISMISSED_AT_KEY);
+    localStorage.removeItem(DISMISS_COUNT_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+type TestSummary = {
+  configured: boolean;
+  devices: number;
+  sent: number;
+  failed: { statusCode: number; message: string }[];
+};
+
+export async function sendTestPush(): Promise<{ ok: boolean; message: string; noDevice?: boolean }> {
+  try {
+    const res = await api.post("/notifications/web-push/test", undefined, { timeout: 45000 });
+    const data = res.data?.data as TestSummary | undefined;
+    if (!data) return { ok: false, message: "The server gave no answer" };
+    if (!data.configured) {
+      return {
+        ok: false,
+        message:
+          "Server push keys are missing. Add VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY and VAPID_SUBJECT to the backend environment and redeploy it.",
+      };
+    }
+    if (data.devices === 0) {
+      return { ok: false, noDevice: true, message: "This account has no saved device yet" };
+    }
+    if (data.sent > 0) return { ok: true, message: "Test sent. You should see it in a moment." };
+    const first = data.failed[0];
+    return {
+      ok: false,
+      message: "The push service rejected it (" + (first?.statusCode || "error") + "): " + (first?.message || ""),
+    };
+  } catch {
+    return { ok: false, message: "Could not reach the server. Check your internet and try again." };
+  }
+}
+
+export async function runPushCheck(): Promise<{ ok: boolean; message: string }> {
+  const subscribed = await subscribeWebPush();
+  if (!subscribed.ok) return { ok: false, message: subscribed.reason || "Could not set up notifications" };
+  const first = await sendTestPush();
+  if (first.noDevice) {
+    const again = await subscribeWebPush();
+    if (!again.ok) return { ok: false, message: again.reason || "Could not set up notifications" };
+    return sendTestPush();
+  }
+  return first;
 }
