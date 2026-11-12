@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { Bell, CheckCircle2 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { AppNotification } from "@doctor-contract/shared";
+import PushEnableRow from "./PushEnableRow";
 
 export default function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
@@ -74,6 +75,8 @@ export default function NotificationBell() {
               {notifications.length} New
             </span>
           </div>
+
+          <PushEnableRow />
 
           {/* Scrollable Body */}
           <div className="max-h-[350px] overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-700">

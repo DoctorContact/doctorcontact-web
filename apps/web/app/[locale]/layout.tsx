@@ -93,6 +93,10 @@ export default async function RootLayout({
       data-scroll-behavior="smooth"
     >
       <head>
+        <link rel="manifest" href="/manifest.webmanifest" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-title" content="Doctor Contact" />
         {/* Google Schema Inject করা হলো */}
         <script
           type="application/ld+json"
