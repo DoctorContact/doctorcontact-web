@@ -419,7 +419,8 @@
     "newPasswordPlaceholder": "New password (min 6 chars)",
     "updating": "Updating...",
     "updatePasswordBtn": "Update Password",
-    "passwordUpdated": "Password updated successfully."
+    "passwordUpdated": "Password updated successfully.",
+    "updatePassword": "Update password"
   },
   "ClinicReferrals": {
     "tagline": "Laboratory",

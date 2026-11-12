@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import type { AuthUser } from "@doctor-contract/shared";
 import { api, setAccessToken, refreshSession } from "./api";
+import { unsubscribeWebPush } from "./push";
 
 type AuthContextValue = {
   user: AuthUser | null;
@@ -47,6 +48,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [loadUser]);
 
   async function logout() {
+    await unsubscribeWebPush();
+
     try {
       await api.post("/auth/logout");
     } catch {

@@ -419,7 +419,8 @@
     "newPasswordPlaceholder": "নতুন পাসওয়ার্ড (কমপক্ষে ৬ অক্ষর)",
     "updating": "উপডঅটিং...",
     "updatePasswordBtn": "পাসওয়ার্ড আপডেট করুন",
-    "passwordUpdated": "পাসওয়ার্ড সফলভাবে আপডেট হয়েছে।"
+    "passwordUpdated": "পাসওয়ার্ড সফলভাবে আপডেট হয়েছে।",
+    "updatePassword": "Update password"
   },
   "ClinicReferrals": {
     "tagline": "ল্যাবরেটরি",

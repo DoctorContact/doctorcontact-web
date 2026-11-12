@@ -408,7 +408,8 @@
     "newPasswordPlaceholder": "नया पासवर्ड (न्यूनतम 6 अक्षर)",
     "updating": "अपडेट किया जा रहा है...",
     "updatePasswordBtn": "पासवर्ड अपडेट करें",
-    "passwordUpdated": "पासवर्ड सफलतापूर्वक अपडेट किया गया।"
+    "passwordUpdated": "पासवर्ड सफलतापूर्वक अपडेट किया गया।",
+    "updatePassword": "Update password"
   },
   "ClinicReferrals": {
     "tagline": "प्रयोगशाला",

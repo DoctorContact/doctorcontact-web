@@ -8,6 +8,7 @@ import { routing } from "@/i18n/routing";
 import { AuthProvider } from "@/lib/auth-context";
 import QueryProvider from "@/components/QueryProvider";
 import SocketProvider from "@/components/SocketProvider";
+import PushNotificationPrompt from "@/components/PushNotificationPrompt";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -110,6 +111,8 @@ export default async function RootLayout({
                   <div className="flex-1">{children}</div>
                   <Footer />
                 </SocketProvider>
+
+                <PushNotificationPrompt />
 
                 <Toaster
                   position="top-right"
