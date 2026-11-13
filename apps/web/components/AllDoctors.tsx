@@ -173,12 +173,19 @@ function AllDoctorCard({ doctor }: { doctor: ExtendedDoctor }) {
           </p>
 
           {/* Location */}
-          {location && (
-            <div className="mt-1.5 flex min-w-0 items-center gap-1">
-              <MapPin className="h-3 w-3 shrink-0 text-[#16A34A]" />
-              <span className="truncate text-[9px] font-medium text-slate-500 dark:text-slate-400">{location}</span>
-            </div>
-          )}
+          
+{location && (
+  <div className="mt-2 flex min-w-0 items-center gap-2 rounded-lg border border-emerald-100 bg-gradient-to-r from-emerald-50 to-teal-50 px-2.5 py-1.5 shadow-[0_2px_8px_rgba(16,185,129,0.06)] dark:border-emerald-900/40 dark:from-emerald-950/30 dark:to-teal-950/20">
+    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-white text-[#16A34A] shadow-sm dark:bg-surface">
+      <MapPin className="h-3.5 w-3.5" />
+    </span>
+
+    <span className="min-w-0 truncate text-[10px] font-semibold tracking-wide text-slate-600 dark:text-slate-300">
+      {location}
+    </span>
+  </div>
+)}
+
 
           {/* Fee Section */}
           <div className="mt-auto">
