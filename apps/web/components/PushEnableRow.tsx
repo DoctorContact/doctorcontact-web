@@ -5,14 +5,12 @@ import { BellRing } from "lucide-react";
 import {
   enablePushWithFeedback,
   getPushState,
-  runPushCheck,
   type PushState,
 } from "@/lib/push";
 
 export default function PushEnableRow() {
   const [state, setState] = useState<PushState>("unsupported");
   const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
 
   useEffect(() => {
     setState(getPushState());
@@ -30,18 +28,10 @@ export default function PushEnableRow() {
     setBusy(false);
   }
 
-  async function sendTest() {
-    if (busy) return;
-    setBusy(true);
-    setResult(null);
-    setResult(await runPushCheck());
-    setBusy(false);
-  }
-
   const granted = state === "granted";
 
   const text = granted
-    ? "This device is set up. Send a test to confirm it reaches you."
+    ? "This device is set up to receive real-time alerts."
     : state === "denied"
       ? "Notifications are blocked. Open your browser site settings, set Notifications to Allow, then reload."
       : state === "ios-install"
@@ -61,6 +51,8 @@ export default function PushEnableRow() {
           <p className="mt-0.5 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
             {text}
           </p>
+          
+          {/* শুধু যাদের অ্যালাও করা নেই, তাদের Enable বাটন দেখাবে */}
           {state === "ask" && (
             <button
               type="button"
@@ -70,26 +62,6 @@ export default function PushEnableRow() {
             >
               {busy ? "Please wait..." : "Enable"}
             </button>
-          )}
-          {granted && (
-            <button
-              type="button"
-              onClick={sendTest}
-              disabled={busy}
-              className="mt-2 rounded-lg bg-[#0F766E] px-3 py-1 text-[11px] font-bold text-white transition hover:bg-[#115e59] disabled:opacity-60"
-            >
-              {busy ? "Sending..." : "Send test notification"}
-            </button>
-          )}
-          {result && (
-            <p
-              className={
-                "mt-2 break-words text-[11px] font-medium " +
-                (result.ok ? "text-emerald-600" : "text-red-600")
-              }
-            >
-              {result.message}
-            </p>
           )}
         </div>
       </div>
