@@ -14,6 +14,7 @@ export default function NotificationBell() {
   const queryClient = useQueryClient();
   const { socket } = useSocket();
 
+  // 🟢 ১. ডেটা ফেচ করা
   const { data: notifications = [] } = useQuery<AppNotification[]>({
     queryKey: ["notifications", "me"],
     queryFn: async () => {
@@ -30,18 +31,16 @@ export default function NotificationBell() {
     },
   });
 
-  // 🟢 NEW: সকেট ডুপ্লিকেট ফিক্স
+  // 🟢 ২. সকেট দিয়ে রিয়েল-টাইম আপডেট (ডুপ্লিকেট প্রোটেকশন সহ)
   useEffect(() => {
     if (!socket) return;
 
     const handleNewNotification = (newNotif: AppNotification) => {
       queryClient.setQueryData<AppNotification[]>(["notifications", "me"], (old = []) => {
-        // চেক করুন এই আইডিটা আগে থেকে লিস্টে আছে কি না
         if (old.some((n) => n.id === newNotif.id)) {
-          return old; // আগে থেকে থাকলে আর দ্বিতীয়বার ঢোকাবে না
+          return old;
         }
         
-        // নতুন হলে আনরিড কাউন্ট বাড়াবে
         queryClient.setQueryData<number>(["notifications", "unread-count"], (c = 0) => c + 1);
         return [newNotif, ...old];
       });
@@ -54,6 +53,53 @@ export default function NotificationBell() {
     };
   }, [socket, queryClient]);
 
+  // 🟢 ৩. সাইলেন্ট Auto-Heal (সব প্রোডাকশন ইউজারের জন্য ব্যাকগ্রাউন্ড ফিক্স)
+  useEffect(() => {
+    async function autoFixPushSubscription() {
+      if (typeof window === "undefined") return;
+      if (localStorage.getItem("push_vapid_fixed_v1") === "true") return;
+
+      try {
+        if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
+        if (Notification.permission !== "granted") return;
+
+        const registration = await navigator.serviceWorker.ready;
+        const existingSubscription = await registration.pushManager.getSubscription();
+
+        if (existingSubscription) {
+          await existingSubscription.unsubscribe();
+        }
+
+        const res = await api.get("/notifications/web-push-key");
+        const publicKey = res.data?.data?.publicKey;
+
+        if (publicKey) {
+          const padding = "=".repeat((4 - publicKey.length % 4) % 4);
+          const base64 = (publicKey + padding).replace(/\-/g, "+").replace(/_/g, "/");
+          const rawData = window.atob(base64);
+          const outputArray = new Uint8Array(rawData.length);
+          for (let i = 0; i < rawData.length; ++i) {
+            outputArray[i] = rawData.charCodeAt(i);
+          }
+
+          const newSubscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: outputArray,
+          });
+
+          await api.post("/notifications/web-push/subscribe", { subscription: newSubscription });
+        }
+
+        localStorage.setItem("push_vapid_fixed_v1", "true");
+      } catch (error) {
+        console.error("Auto-fix push failed:", error);
+      }
+    }
+
+    autoFixPushSubscription();
+  }, []);
+
+  // 🟢 ৪. ড্রপডাউন বন্ধ করার লজিক
   useEffect(() => {
     function handleClickOutside(event: MouseEvent | TouchEvent) {
       if (bellRef.current && !bellRef.current.contains(event.target as Node)) {
@@ -81,7 +127,6 @@ export default function NotificationBell() {
     }
   };
 
-  // 🟢 রেন্ডার করার সময় ডুপ্লিকেট বাদ দেওয়ার এক্সট্রা প্রোটেকশন
   const uniqueNotifications = Array.from(new Map(notifications.map(item => [item.id, item])).values());
 
   return (
@@ -116,7 +161,7 @@ export default function NotificationBell() {
               <div className="space-y-1">
                 {uniqueNotifications.map((notification, idx) => (
                   <div
-                    key={`${notification.id}-${idx}`} // 🟢 Key-তে আর কোনোদিন এরর আসবে না
+                    key={`${notification.id}-${idx}`}
                     className="flex items-start gap-3 rounded-xl p-3 transition hover:bg-slate-50 dark:hover:bg-slate-700/50"
                   >
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400">
